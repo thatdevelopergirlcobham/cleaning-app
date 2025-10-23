@@ -21,13 +21,13 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="bg-none  sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav className=" sticky top-5 z-40">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center h-16 p-7 bg-[#2F6B02] rounded-2xl max-w-6xl mx-auto">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
               
-              <span className="font-heading font-semibold text-xl text-primary">CleanCal</span>
+              <span className="font-heading font-semibold text-xl text-white">CleanCal</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -35,7 +35,7 @@ const Navbar: React.FC = () => {
               <Link
                 to={user ? "/home" : "/"}
                 className={`font-medium transition-colors ${
-                  isActive(user ? "/home" : "/") ? 'text-primary' : 'text-gray-600 hover:text-primary'
+                  isActive(user ? "/home" : "/") ? ' text-white' : ' text-white hover:text-primary'
                 }`}
               >
                 Home
@@ -43,7 +43,7 @@ const Navbar: React.FC = () => {
               <Link
                 to="/events"
                 className={`font-medium transition-colors ${
-                  isActive('/events') ? 'text-primary' : 'text-gray-600 hover:text-primary'
+                  isActive('/events') ? 'text-primary' : ' text-white hover:text-primary'
                 }`}
               >
                 Events
@@ -51,7 +51,7 @@ const Navbar: React.FC = () => {
               <Link
                 to="/about"
                 className={`font-medium transition-colors ${
-                  isActive('/about') ? 'text-primary' : 'text-gray-600 hover:text-primary'
+                  isActive('/about') ? 'text-primary' : ' text-white hover:text-primary'
                 }`}
               >
                 About
@@ -65,7 +65,7 @@ const Navbar: React.FC = () => {
                   {/* Notification Bell */}
                   <button
                     onClick={() => setIsNotificationCenterOpen(true)}
-                    className="relative p-2 text-gray-600 hover:text-primary transition-colors"
+                    className="relative p-2  text-white hover:text-primary transition-colors"
                   >
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
@@ -110,10 +110,10 @@ const Navbar: React.FC = () => {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <Link to="/auth" className="btn-outline">
+                <div className="flex items-center ">
+                  {/* <Link to="/auth" className="btn-outline">
                     Sign In
-                  </Link>
+                  </Link> */}
                   <Link to="/auth?mode=signup" className="btn-primary">
                     Sign Up
                   </Link>
