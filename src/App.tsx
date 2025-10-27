@@ -5,9 +5,10 @@ import { UIProvider } from './contexts/UIContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { NotificationProvider } from './contexts/NotificationContext'
 import { AIProvider } from './contexts/AIContext'
+import LandingPage from './pages/LandingPage'
 
 // Common Components
-import Navbar from './components/common/Navbar'
+import Navbar from './components/Navbar';
 import MobileBottomNav from './components/common/MobileBottomNav'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import Toaster from './components/common/Toaster'
@@ -28,7 +29,6 @@ import Agents from './pages/admin/Agents'
 // Auth & Other Pages
 import Auth from './pages/Auth'
 import About from './pages/About'
-import LandingPage from './pages/LandingPage'
 import NotFound from './pages/NotFound'
 import AnalyticsDashboard from './pages/admin/AnalyticsDashboard'
 
