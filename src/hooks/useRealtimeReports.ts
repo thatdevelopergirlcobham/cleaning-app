@@ -1,72 +1,105 @@
-import { useState, useEffect } from 'react'
-import type { ReportWithProfile } from '../api/reports'
-import { reportsApi } from '../api/reports'
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
+import { getReports } from '../api/reports';
+import type { Report, ReportWithProfile } from '../api/reports';
 
-export const useRealtimeReports = () => {
-  const [reports, setReports] = useState<ReportWithProfile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface UseRealtimeReportsReturn {
+  reports: ReportWithProfile[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  addReport: (report: ReportWithProfile) => void;
+  updateReport: (report: ReportWithProfile) => void;
+  removeReport: (id: string) => void;
+}
 
-  const fetchReports = async () => {
+export const useRealtimeReports = (): UseRealtimeReportsReturn => {
+  const [reports, setReports] = useState<ReportWithProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchReports = useCallback(async () => {
     try {
-      setLoading(true)
-      const data = await reportsApi.getApprovedReports()
-      setReports(data)
-      setError(null)
-    } catch (err) {
-      setError('Failed to fetch reports')
-      console.error('Error fetching reports:', err)
+      setLoading(true);
+      const data = await getReports();
+      setReports(data);
+      setError(null);
+    } catch (err: any) {
+      setError('Failed to fetch reports');
+      console.error('Error fetching reports:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }, []);
 
-  const addReport = (newReport: ReportWithProfile) => {
-    setReports(prev => [newReport, ...prev])
-  }
+  const addReport = useCallback((report: ReportWithProfile) => {
+    setReports(prev => [...prev, report]);
+  }, []);
 
-  const updateReport = (updatedReport: ReportWithProfile) => {
+  const updateReport = useCallback((updatedReport: ReportWithProfile) => {
     setReports(prev =>
       prev.map(report =>
         report.id === updatedReport.id ? updatedReport : report
       )
-    )
-  }
+    );
+  }, []);
 
-  const removeReport = (reportId: string) => {
-    setReports(prev => prev.filter(report => report.id !== reportId))
-  }
+  const removeReport = useCallback((reportId: string) => {
+    setReports(prev => prev.filter(report => report.id !== reportId));
+  }, []);
 
   useEffect(() => {
-    fetchReports()
+    fetchReports();
 
-    // Subscribe to real-time updates
-    const subscription = reportsApi.subscribeToReports((payload) => {
-      console.log('Real-time report update:', payload)
-
-      if (payload.eventType === 'INSERT' && payload.new) {
-        // Only add if it's approved (for community feed)
-        if (payload.new.status === 'approved') {
-          addReport(payload.new as ReportWithProfile)
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel('realtime-reports')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'reports'
+        },
+        (payload: { new: Report }) => {
+          if (payload.new.status === 'approved') {
+            addReport(payload.new as ReportWithProfile);
+          }
         }
-      } else if (payload.eventType === 'UPDATE' && payload.new) {
-        const updatedReport = payload.new as ReportWithProfile
-
-        if (updatedReport.status === 'approved') {
-          updateReport(updatedReport)
-        } else {
-          // Remove if no longer approved
-          removeReport(updatedReport.id)
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'reports'
+        },
+        (payload: { new: Report }) => {
+          const updatedReport = payload.new as ReportWithProfile;
+          if (updatedReport.status === 'approved') {
+            updateReport(updatedReport);
+          } else {
+            removeReport(updatedReport.id);
+          }
         }
-      } else if (payload.eventType === 'DELETE' && payload.old) {
-        removeReport(payload.old.id)
-      }
-    })
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'reports'
+        },
+        (payload: { old: { id: string } }) => {
+          removeReport(payload.old.id);
+        }
+      )
+      .subscribe();
 
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+      subscription.unsubscribe();
+    };
+  }, [fetchReports, addReport, updateReport, removeReport]);
 
   return {
     reports,
@@ -76,5 +109,5 @@ export const useRealtimeReports = () => {
     addReport,
     updateReport,
     removeReport,
-  }
-}
+  };
+};

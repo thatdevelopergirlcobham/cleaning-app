@@ -1,4 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+
+/* Apply Poppins font to all elements */
+* {
+  font-family: 'Poppins', sans-serif;
+}
 
 /* Custom theme configuration for Tailwind v4 */
 @theme {

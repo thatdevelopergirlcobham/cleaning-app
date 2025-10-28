@@ -7,7 +7,7 @@ export interface Notification {
   message: string
   type: 'report_approved' | 'report_rejected' | 'report_submitted' | 'system' | 'ai_insight'
   read: boolean
-  data?: any // Additional data related to the notification
+  data?: Record<string, unknown> // Additional data related to the notification
   created_at: string
   updated_at: string
 }
@@ -18,7 +18,7 @@ export interface NotificationInsert {
   message: string
   type: Notification['type']
   read?: boolean
-  data?: any
+  data?: Record<string, unknown>
 }
 
 export interface NotificationUpdate {

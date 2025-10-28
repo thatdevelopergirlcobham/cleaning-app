@@ -6,13 +6,13 @@ import {
   Calendar,
   MapPin,
   Clock,
-  BarChart3,
+  // BarChart3,
   FileText,
   Users,
 } from 'lucide-react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../contexts/ToastContext'
-import { reportsApi } from '../../api/reports'
+import { getReports, updateReport } from '../../api/reports'
 import type { ReportWithProfile } from '../../api/reports'
 import { eventsApi } from '../../api/events'
 import type { EventWithProfile } from '../../api/events'
@@ -34,6 +34,7 @@ interface DashboardStats {
 const AdminDashboard: React.FC = () => {
   const { profile } = useAuth()
   const { addToast } = useToast()
+
   const [stats, setStats] = useState<DashboardStats>({
     totalReports: 0,
     approvedReports: 0,
@@ -42,7 +43,7 @@ const AdminDashboard: React.FC = () => {
     totalEvents: 0,
     totalUsers: 0,
     totalAgents: 0,
-    activeUsers: 0
+    activeUsers: 0,
   })
   const [recentReports, setRecentReports] = useState<ReportWithProfile[]>([])
   const [upcomingEvents, setUpcomingEvents] = useState<EventWithProfile[]>([])
@@ -51,50 +52,35 @@ const AdminDashboard: React.FC = () => {
   const loadDashboardData = useCallback(async () => {
     setLoading(true)
     try {
-      // Load all data in parallel
-      const [
-        pendingReportsResponse,
-        approvedReportsResponse,
-        eventsResponse,
-        usersResponse,
-        agentsResponse
-      ] = await Promise.all([
-        reportsApi.getPendingReports(),
-        reportsApi.getApprovedReports(),
+      const [allReports, eventsResponse, usersResponse, agentsResponse] = await Promise.all([
+        getReports(),
         eventsApi.getUpcomingEvents(),
         usersApi.getAllUsers(),
-        agentsApi.getAvailableAgents()
+        agentsApi.getAvailableAgents(),
       ])
 
-      // Calculate stats
-      const pendingReports = pendingReportsResponse || []
-      const approvedReports = approvedReportsResponse || []
-      const allEvents = eventsResponse || []
-      const allUsers = usersResponse || []
-      const allAgents = agentsResponse || []
+      const pendingReports = allReports.filter(r => r.status === 'pending')
+      const approvedReports = allReports.filter(r => r.status === 'approved')
+      const resolvedReports = allReports.filter(r => r.status === 'resolved')
 
       setStats({
-        totalReports: pendingReports.length + approvedReports.length,
+        totalReports: allReports.length,
         approvedReports: approvedReports.length,
         pendingReports: pendingReports.length,
-        resolvedReports: approvedReports.filter(r => r.status === 'resolved').length,
-        totalEvents: allEvents.length,
-        totalUsers: allUsers.length,
-        totalAgents: allAgents.length,
-        activeUsers: allUsers.filter(u => u.role === 'user').length
+        resolvedReports: resolvedReports.length,
+        totalEvents: eventsResponse.length,
+        totalUsers: usersResponse.length,
+        totalAgents: agentsResponse.length,
+        activeUsers: usersResponse.filter(u => u.role === 'user').length,
       })
 
-      // Set recent pending reports (last 5) for admin review
       setRecentReports(pendingReports.slice(0, 5))
-
-      // Set upcoming events (next 3)
-      setUpcomingEvents(allEvents.slice(0, 3))
-
+      setUpcomingEvents(eventsResponse.slice(0, 3))
     } catch {
       addToast({
         type: 'error',
-        title: 'Failed to Load Dashboard',
-        message: 'Could not load dashboard data. Please try again.'
+        title: 'Error',
+        message: 'Failed to load dashboard data. Please try again.',
       })
     } finally {
       setLoading(false)
@@ -107,36 +93,44 @@ const AdminDashboard: React.FC = () => {
 
   const handleApproveReport = async (reportId: string) => {
     try {
-      await reportsApi.updateReportStatus(reportId, 'approved')
+      await updateReport(reportId, { status: 'approved' })
+      setRecentReports((prev: ReportWithProfile[]) =>
+        prev.map((r: ReportWithProfile) => 
+          r.id === reportId ? { ...r, status: 'approved' } as ReportWithProfile : r
+        )
+      )
       addToast({
         type: 'success',
-        title: 'Report Approved',
-        message: 'The report has been approved and is now visible to users.'
+        title: 'Success',
+        message: 'Report approved successfully.',
       })
-      loadDashboardData()
-    } catch {
+    } catch (error) {
+      console.error('Error approving report:', error)
       addToast({
         type: 'error',
-        title: 'Approval Failed',
-        message: 'Could not approve the report. Please try again.'
+        title: 'Error',
+        message: 'Failed to approve report. Please try again.',
       })
     }
   }
 
   const handleRejectReport = async (reportId: string) => {
     try {
-      await reportsApi.updateReportStatus(reportId, 'rejected')
+      await updateReport(reportId, { status: 'rejected' })
+      setRecentReports((prev: ReportWithProfile[]) => 
+        prev.filter((r: ReportWithProfile) => r.id !== reportId)
+      )
       addToast({
         type: 'success',
-        title: 'Report Rejected',
-        message: 'The report has been rejected.'
+        title: 'Success',
+        message: 'Report rejected successfully.',
       })
-      loadDashboardData()
-    } catch {
+    } catch (error) {
+      console.error('Error rejecting report:', error)
       addToast({
         type: 'error',
-        title: 'Rejection Failed',
-        message: 'Could not reject the report. Please try again.'
+        title: 'Error',
+        message: 'Failed to reject report. Please try again.',
       })
     }
   }
@@ -148,7 +142,7 @@ const AdminDashboard: React.FC = () => {
       change: '+12%',
       icon: FileText,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      bgColor: 'bg-blue-50',
     },
     {
       title: 'Approved Reports',
@@ -156,7 +150,7 @@ const AdminDashboard: React.FC = () => {
       change: '+8%',
       icon: CheckCircle,
       color: 'text-green-600',
-      bgColor: 'bg-green-50'
+      bgColor: 'bg-green-50',
     },
     {
       title: 'Pending Reviews',
@@ -164,7 +158,7 @@ const AdminDashboard: React.FC = () => {
       change: '-5%',
       icon: AlertTriangle,
       color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+      bgColor: 'bg-orange-50',
     },
     {
       title: 'Active Users',
@@ -172,8 +166,8 @@ const AdminDashboard: React.FC = () => {
       change: '+15%',
       icon: Users,
       color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    }
+      bgColor: 'bg-purple-50',
+    },
   ]
 
   if (loading) {
@@ -192,117 +186,98 @@ const AdminDashboard: React.FC = () => {
       className="p-6"
     >
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.1 }}
-        className="mb-8"
-      >
-        <h1 className="font-heading font-bold text-3xl text-gray-900 mb-2">
-          Admin Dashboard
-        </h1>
-        <p className="text-gray-600">
-          Welcome back, {profile?.full_name}! Here's an overview of your platform.
-        </p>
-      </motion.div>
+      <h1 className="font-heading font-bold text-3xl text-gray-900 mb-2">
+        Admin Dashboard
+      </h1>
+      <p className="text-gray-600 mb-8">
+        Welcome back, {profile?.full_name}! Here's an overview of your platform.
+      </p>
 
       {/* KPI Cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-      >
-        {kpiCards.map((kpi, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {kpiCards.map((kpi, i) => (
           <motion.div
             key={kpi.title}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, delay: 0.1 * index }}
+            transition={{ duration: 0.4, delay: 0.1 * i }}
             className="card hover:shadow-lg transition-shadow"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">{kpi.title}</p>
+                <p className="text-sm text-gray-600 mb-1">{kpi.title}</p>
                 <p className="text-3xl font-bold text-gray-900">{kpi.value}</p>
-                <p className="text-sm text-green-600 font-medium">{kpi.change} from last month</p>
+                <p className="text-sm text-green-600 font-medium">
+                  {kpi.change} from last month
+                </p>
               </div>
-              <div className={`w-12 h-12 ${kpi.bgColor} rounded-full flex items-center justify-center`}>
+              <div
+                className={`w-12 h-12 ${kpi.bgColor} rounded-full flex items-center justify-center`}
+              >
                 <kpi.icon className={`w-6 h-6 ${kpi.color}`} />
               </div>
             </div>
           </motion.div>
         ))}
-      </motion.div>
+      </div>
 
+      {/* Pending Reports */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Reports */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="card"
-        >
+        <motion.div className="card">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-heading font-semibold text-xl text-gray-900">
               Pending Reports
             </h2>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               className="btn-outline text-sm"
-              onClick={() => window.location.href = '/admin/reports'}
+              onClick={() => (window.location.href = '/admin/reports')}
             >
               Review All
-            </motion.button>
+            </button>
           </div>
 
           <div className="space-y-4">
             {recentReports.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No reports yet</p>
             ) : (
-              recentReports.map((report, index) => (
+              recentReports.map((r, i) => (
                 <motion.div
-                  key={report.id}
+                  key={r.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 * index }}
-                  className="flex items-start space-x-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
+                  transition={{ duration: 0.3, delay: 0.1 * i }}
+                  className="flex items-start space-x-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition"
                 >
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">{report.title}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-2">{report.description}</p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <div className="flex items-center space-x-1 text-xs text-gray-500">
-                        <MapPin className="w-3 h-3" />
-                        <span>{report.location.lat.toFixed(4)}, {report.location.lng.toFixed(4)}</span>
-                      </div>
-                      <div className="flex items-center space-x-1 text-xs text-gray-500">
-                        <Clock className="w-3 h-3" />
-                        <span>{new Date(report.created_at).toLocaleDateString()}</span>
-                      </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 truncate">{r.title}</h3>
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {r.description}
+                    </p>
+                    <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                      <MapPin className="w-3 h-3" />
+                      <span>
+                        {r.location?.lat?.toFixed(4)}, {r.location?.lng?.toFixed(4)}
+                      </span>
+                      <Clock className="w-3 h-3 ml-2" />
+                      <span>{new Date(r.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleApproveReport(report.id)}
-                      className="px-3 py-1 bg-green-500 text-white text-xs rounded-full hover:bg-green-600 transition-colors"
+                    <button
+                      onClick={() => handleApproveReport(r.id)}
+                      className="px-3 py-1 bg-green-500 text-white text-xs rounded-full hover:bg-green-600"
                     >
                       Approve
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleRejectReport(report.id)}
-                      className="px-3 py-1 bg-red-500 text-white text-xs rounded-full hover:bg-red-600 transition-colors"
+                    </button>
+                    <button
+                      onClick={() => handleRejectReport(r.id)}
+                      className="px-3 py-1 bg-red-500 text-white text-xs rounded-full hover:bg-red-600"
                     >
                       Reject
-                    </motion.button>
+                    </button>
                   </div>
                 </motion.div>
               ))
@@ -311,102 +286,57 @@ const AdminDashboard: React.FC = () => {
         </motion.div>
 
         {/* Upcoming Events */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="card"
-        >
+        <motion.div className="card">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-heading font-semibold text-xl text-gray-900">
               Upcoming Events
             </h2>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               className="btn-outline text-sm"
-              onClick={() => window.location.href = '/events'}
+              onClick={() => (window.location.href = '/events')}
             >
               View All
-            </motion.button>
+            </button>
           </div>
 
           <div className="space-y-4">
             {upcomingEvents.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No upcoming events</p>
             ) : (
-              upcomingEvents.map((event, index) => (
+              upcomingEvents.map((e, i) => (
                 <motion.div
-                  key={event.id}
+                  key={e.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 * index }}
-                  className="flex items-start space-x-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
+                  transition={{ duration: 0.3, delay: 0.1 * i }}
+                  className="flex items-start space-x-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition"
                 >
-                  <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-accent" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">{event.title}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-2">{event.description}</p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <div className="flex items-center space-x-1 text-xs text-gray-500">
-                        <Calendar className="w-3 h-3" />
-                        <span>{new Date(event.date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center space-x-1 text-xs text-gray-500">
-                        <MapPin className="w-3 h-3" />
-                        <span>{event.location.lat.toFixed(4)}, {event.location.lng.toFixed(4)}</span>
-                      </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 truncate">{e.title}</h3>
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {e.description}
+                    </p>
+                    <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                      <Calendar className="w-3 h-3" />
+                      <span>{new Date(e.date).toLocaleDateString()}</span>
+                      <MapPin className="w-3 h-3" />
+                      <span>
+                        {e.location?.lat?.toFixed(4)}, {e.location?.lng?.toFixed(4)}
+                      </span>
                     </div>
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-3 py-1 bg-primary text-white text-xs rounded-full hover:bg-primary/90 transition-colors"
-                  >
+                  <button className="px-3 py-1 bg-primary text-white text-xs rounded-full hover:bg-primary/90">
                     Manage
-                  </motion.button>
+                  </button>
                 </motion.div>
               ))
             )}
           </div>
         </motion.div>
       </div>
-
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.5 }}
-        className="mt-8"
-      >
-        <h2 className="font-heading font-semibold text-xl text-gray-900 mb-6">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Review Reports', icon: FileText, href: '/admin/reports', color: 'bg-blue-500' },
-            { label: 'Manage Events', icon: Calendar, href: '/events', color: 'bg-green-500' },
-            { label: 'View Analytics', icon: BarChart3, href: '/admin/analytics', color: 'bg-purple-500' },
-            { label: 'User Management', icon: Users, href: '/admin/users', color: 'bg-orange-500' }
-          ].map((action, index) => (
-            <motion.button
-              key={action.label}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.1 * index }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => window.location.href = action.href}
-              className={`${action.color} text-white p-6 rounded-2xl hover:opacity-90 transition-opacity flex flex-col items-center space-y-3`}
-            >
-              <action.icon className="w-8 h-8" />
-              <span className="font-medium">{action.label}</span>
-            </motion.button>
-          ))}
-        </div>
-      </motion.div>
     </motion.div>
   )
 }

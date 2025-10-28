@@ -8,7 +8,8 @@ import {
   Clock,
   Activity
 } from 'lucide-react'
-import { reportsApi } from '../../api/reports'
+import type { ReportWithProfile, Report } from '../../api/reports'
+import { getReports } from '../../api/reports'
 import { eventsApi } from '../../api/events'
 import { usersApi } from '../../api/users'
 import {
@@ -55,8 +56,22 @@ interface AnalyticsData {
     user_id: string
     full_name: string
     report_count: number
-    avatar_url?: string
+    avatar_url?: string | null
   }>
+}
+
+interface LocationCount {
+  location: string
+  count: number
+  lat: number
+  lng: number
+}
+
+interface Reporter {
+  user_id: string
+  full_name: string
+  report_count: number
+  avatar_url?: string | null
 }
 
 const AnalyticsDashboard: React.FC = () => {
@@ -73,27 +88,26 @@ const AnalyticsDashboard: React.FC = () => {
         eventsResponse,
         usersResponse
       ] = await Promise.all([
-        reportsApi.getAllReports(),
+        getReports(),
         eventsApi.getAllEvents(),
         usersApi.getAllUsers()
       ])
 
       const allReports = reportsResponse || []
       const allEvents = eventsResponse || []
-      const allUsers = usersResponse || []
 
       // Process report trends (last 30 days by default)
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const recentReports = allReports.filter((report: any) =>
+      const recentReports = allReports.filter((report: Report) =>
         new Date(report.created_at) >= thirtyDaysAgo
       )
 
       // Group by date and status
       const reportTrendsMap = new Map<string, { pending: number; approved: number; rejected: number; resolved: number }>()
 
-      recentReports.forEach((report: { created_at: string; status: string }) => {
+      recentReports.forEach((report: Report) => {
         const date = new Date(report.created_at).toISOString().split('T')[0]
         const current = reportTrendsMap.get(date) || { pending: 0, approved: 0, rejected: 0, resolved: 0 }
 
@@ -121,10 +135,10 @@ const AnalyticsDashboard: React.FC = () => {
 
       // Status distribution
       const statusCounts = {
-        pending: allReports.filter((r: any) => r.status === 'pending').length,
-        approved: allReports.filter((r: any) => r.status === 'approved').length,
-        rejected: allReports.filter((r: any) => r.status === 'rejected').length,
-        resolved: allReports.filter((r: any) => r.status === 'resolved').length
+        pending: allReports.filter((r: Report) => r.status === 'pending').length,
+        approved: allReports.filter((r: Report) => r.status === 'approved').length,
+        rejected: allReports.filter((r: Report) => r.status === 'rejected').length,
+        resolved: allReports.filter((r: Report) => r.status === 'resolved').length
       }
 
       const statusDistribution = [
@@ -135,24 +149,28 @@ const AnalyticsDashboard: React.FC = () => {
       ]
 
       // Location hotspots (top 10 locations by report count)
-      const locationCounts = new Map<string, { count: number; lat: number; lng: number }>()
+      const locationCounts = allEvents.reduce<Record<string, LocationCount>>((acc: Record<string, LocationCount>, event: any) => {
+        const location = event.location
+        if (!acc[location]) {
+          acc[location] = {
+            location,
+            count: 0,
+            lat: event.lat || 0,
+            lng: event.lng || 0
+          }
+        }
+        acc[location].count++
+        return acc
+      }, {})
 
-      allReports.forEach((report: any) => {
-        const key = `${report.location.lat.toFixed(4)},${report.location.lng.toFixed(4)}`
-        const current = locationCounts.get(key) || { count: 0, lat: report.location.lat, lng: report.location.lng }
-        current.count++
-        locationCounts.set(key, current)
-      })
-
-      const locationHotspots = Array.from(locationCounts.entries())
-        .map(([location, data]) => ({ location, ...data }))
-        .sort((a, b) => b.count - a.count)
+      const locationHotspots = Object.values(locationCounts)
+        .sort((a: LocationCount, b: LocationCount) => b.count - a.count)
         .slice(0, 10)
 
       // User activity (reports and events over time)
       const userActivityMap = new Map<string, { reports: number; events: number }>()
 
-      recentReports.forEach((report: any) => {
+      recentReports.forEach((report: Report) => {
         const date = new Date(report.created_at).toISOString().split('T')[0]
         const current = userActivityMap.get(date) || { reports: 0, events: 0 }
         current.reports++
@@ -171,20 +189,24 @@ const AnalyticsDashboard: React.FC = () => {
         .sort((a, b) => a.date.localeCompare(b.date))
 
       // Top reporters
-      const reporterCounts = new Map<string, { full_name: string; report_count: number; avatar_url?: string }>()
+      const reporterCounts = Object.entries(
+        allReports.reduce<Record<string, Reporter>>((acc, report: ReportWithProfile) => {
+          const userId = report.user_id
+          if (!acc[userId]) {
+            acc[userId] = {
+              user_id: userId,
+              full_name: report.user_profiles?.full_name || 'Unknown',
+              report_count: 0,
+              avatar_url: report.user_profiles?.avatar_url
+            }
+          }
+          acc[userId].report_count++
+          return acc
+        }, {})
+      )
 
-      allReports.forEach((report: any) => {
-        const userId = report.user_id
-        const user = allUsers.find((u: any) => u.id === userId)
-        if (user) {
-          const current = reporterCounts.get(userId) || { full_name: user.full_name, report_count: 0, avatar_url: user.avatar_url }
-          current.report_count++
-          reporterCounts.set(userId, current)
-        }
-      })
-
-      const topReporters = Array.from(reporterCounts.entries())
-        .map(([userId, data]) => ({ user_id: userId, ...data }))
+      const topReporters = reporterCounts
+        .map(([userId, data]: [string, Reporter]) => ({ user_id: userId, ...data }))
         .sort((a, b) => b.report_count - a.report_count)
         .slice(0, 10)
 

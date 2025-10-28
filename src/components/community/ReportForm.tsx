@@ -4,11 +4,14 @@ import { useGeolocation } from '../../hooks/useGeoLocation'
 import ImageUploader from '../common/ImageUploader'
 import Modal from '../common/Modal'
 
-interface ReportFormData {
+export interface ReportFormData {
   title: string
   description: string
   location: { lat: number; lng: number } | null
   imageUrl: string
+  type: string
+  severity: 'low' | 'medium' | 'high'
+  area: string
 }
 
 interface ReportFormProps {
@@ -25,26 +28,30 @@ const ReportForm: React.FC<ReportFormProps> = ({
   initialData = {},
 }) => {
   const { location, requestLocation, loading: locationLoading } = useGeolocation()
-  const [formData, setFormData] = useState<ReportFormData>({
+  const [formData, setFormData] = useState<ReportFormData>(() => ({
     title: '',
     description: '',
     location: null,
     imageUrl: '',
+    type: 'general',
+    severity: 'medium',
+    area: '',
     ...initialData,
-  })
+  }))
   const [loading, setLoading] = useState(false)
 
+  // Update form data when location is available
   React.useEffect(() => {
     if (location && !formData.location) {
       setFormData(prev => ({ ...prev, location }))
     }
-  }, [location])
+  }, [location, formData.location])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.title.trim() || !formData.description.trim() || !formData.location) {
-      alert('Please fill in all required fields and ensure location is available')
+    if (!formData.title.trim() || !formData.description.trim() || !formData.location || !formData.area) {
+      alert('Please fill in all required fields: title, description, location, and area')
       return
     }
 
@@ -58,6 +65,9 @@ const ReportForm: React.FC<ReportFormProps> = ({
         description: '',
         location: null,
         imageUrl: '',
+        type: 'other',
+        severity: 'medium',
+        area: ''
       })
     } catch (error) {
       console.error('Error submitting report:', error)
@@ -74,36 +84,89 @@ const ReportForm: React.FC<ReportFormProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Report Waste Issue" className="max-w-2xl">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Title */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-            Title *
-          </label>
-          <input
-            type="text"
-            id="title"
-            value={formData.title}
-            onChange={(e) => updateFormData({ title: e.target.value })}
-            className="input-field"
-            placeholder="Brief description of the waste issue"
-            required
-          />
-        </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                Title *
+              </label>
+              <input
+                type="text"
+                id="title"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                value={formData.title}
+                onChange={e => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="area" className="block text-sm font-medium text-gray-700">
+                Area/Neighborhood *
+              </label>
+              <input
+                type="text"
+                id="area"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                value={formData.area}
+                onChange={e => setFormData({ ...formData, area: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                Type of Waste
+              </label>
+              <select
+                id="type"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                value={formData.type}
+                onChange={e => setFormData({ ...formData, type: e.target.value })}
+              >
+                <option value="general">General Waste</option>
+                <option value="recyclable">Recyclable</option>
+                <option value="hazardous">Hazardous</option>
+                <option value="organic">Organic</option>
+                <option value="e-waste">E-Waste</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="severity" className="block text-sm font-medium text-gray-700">
+                Severity
+              </label>
+              <select
+                id="severity"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                value={formData.severity}
+                onChange={e => setFormData({ 
+                  ...formData, 
+                  severity: e.target.value as 'low' | 'medium' | 'high' 
+                })}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
 
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-            Description *
-          </label>
-          <textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => updateFormData({ description: e.target.value })}
-            rows={4}
-            className="input-field resize-none"
-            placeholder="Provide details about the waste issue, including type of waste, quantity, and any other relevant information"
-            required
-          />
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              Description *
+            </label>
+            <textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => updateFormData({ description: e.target.value })}
+              rows={4}
+              className="input-field resize-none"
+              placeholder="Provide details about the waste issue, including type of waste, quantity, and any other relevant information"
+              required
+            />
+          </div>
         </div>
 
         {/* Location */}

@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './contexts/AuthContext'
+import { useAuth } from './hooks/useAuth'
 import { AuthProvider } from './contexts/AuthContext'
 import { UIProvider } from './contexts/UIContext'
 import { ToastProvider } from './contexts/ToastContext'
-import { NotificationProvider } from './contexts/NotificationContext'
+import NotificationProvider from './contexts/NotificationContext'
 import { AIProvider } from './contexts/AIContext'
 import LandingPage from './pages/LandingPage'
 
@@ -44,7 +44,7 @@ function App() {
       <AuthProvider>
         <UIProvider>
           <ToastProvider>
-            <NotificationProvider>
+            <NotificationProvider value={null}>
               <AIProvider>
                 <div className="min-h-screen bg-gray-50">
                   <Navbar />
@@ -59,9 +59,9 @@ function App() {
                       <Route
                         path="/home"
                         element={
-                          <ProtectedRoute>
+                          // <ProtectedRoute>
                             <CommunityHome />
-                          </ProtectedRoute>
+                          // </ProtectedRoute>
                         }
                       />
 
@@ -72,9 +72,9 @@ function App() {
                       <Route
                         path="/profile"
                         element={
-                          <ProtectedRoute>
+                          // <ProtectedRoute>
                             <Profile />
-                          </ProtectedRoute>
+                          // </ProtectedRoute>
                         }
                       />
 

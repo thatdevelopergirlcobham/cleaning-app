@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../contexts/ToastContext'
-import { reportsApi } from '../../api/reports'
+import { createReport } from '../../api/reports'
 import ReportForm from '../../components/community/ReportForm'
 
 interface ReportFormData {
@@ -18,7 +18,7 @@ const ReportNew: React.FC = () => {
   const { addToast } = useToast()
   const navigate = useNavigate()
 
-  const handleSubmitReport = async (data: ReportFormData) => {
+  const handleSubmitReport = async (formData: ReportFormData) => {
     if (!user) {
       addToast({
         type: 'error',
@@ -29,25 +29,22 @@ const ReportNew: React.FC = () => {
     }
 
     try {
-      await reportsApi.createReport({
-        title: data.title,
-        description: data.description,
-        location: data.location ? { lat: data.location.lat, lng: data.location.lng } : { lat: 0, lng: 0 },
-        image_url: data.imageUrl || undefined,
+      await createReport({
+        ...formData,
         user_id: user.id,
-        status: 'pending' // Reports start as pending and need admin approval
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        location: formData.location || { lat: 0, lng: 0 } // Ensure location is not null
       })
-
       addToast({
         type: 'success',
         title: 'Report Submitted!',
         message: 'Thank you for helping keep Calabar clean. Your report will be reviewed by our team.'
       })
-
-      // Redirect to home after successful submission
-      navigate('/home')
+      navigate('/community')
     } catch (error) {
-      console.error('Error submitting report:', error)
+      console.error('Error creating report:', error)
       addToast({
         type: 'error',
         title: 'Submission Failed',

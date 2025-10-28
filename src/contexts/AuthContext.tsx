@@ -1,28 +1,31 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import type { User, Session, AuthError } from '@supabase/supabase-js'
+import React, { createContext, useEffect, useState, useCallback } from 'react'
+import type { User, Session, AuthError, UserMetadata } from '@supabase/supabase-js'
 import { supabase } from '../api/supabaseClient'
 import { usersApi } from '../api/users'
 
-interface AuthContextType {
+export interface UserProfile {
+  id: string
+  full_name: string
+  avatar_url?: string
+  phone?: string
+  role?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AuthContextType {
   user: User | null
   session: Session | null
-  profile: any | null
+  profile: UserProfile | null
   loading: boolean
   signUp: (email: string, password: string, fullName: string) => Promise<{ user: User | null; error: AuthError | null }>
   signIn: (email: string, password: string) => Promise<{ user: User | null; error: AuthError | null }>
   signOut: () => Promise<{ error: AuthError | null }>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: Error }>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+export const AuthContext = createContext<AuthContextType | null>(null)
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -31,8 +34,20 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<any | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const loadUserProfile = useCallback(async (userId: string) => {
+    try {
+      const profile = await usersApi.getUserProfile(userId)
+      setProfile(profile as UserProfile)
+    } catch (error) {
+      console.error('Error loading user profile:', error)
+      setProfile(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     // Get initial session
@@ -62,32 +77,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [loadUserProfile])
 
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const profile = await usersApi.getUserProfile(userId)
-      setProfile(profile)
-    } catch (error) {
-      console.error('Error loading user profile:', error)
-      // If profile doesn't exist, create one
-      try {
-        if (user?.email) {
-          const newProfile = await usersApi.createUserProfile({
-            id: userId,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || 'User',
-            role: 'user'
-          })
-          setProfile(newProfile)
-        }
-      } catch (createError) {
-        console.error('Error creating user profile:', createError)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
@@ -101,14 +92,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       })
 
-      if (data.user && !error) {
-        // Create profile
-        await usersApi.createUserProfile({
-          id: data.user.id,
-          email: data.user.email!,
-          full_name: fullName,
-          role: 'user'
-        })
+      if (error) {
+        return { user: null, error }
       }
 
       return { user: data.user, error }
@@ -153,6 +138,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  const updateProfile = useCallback(async (updates: Omit<Partial<UserProfile>, 'role'>) => {
+    if (!user) return { success: false, error: new Error('No user logged in') }
+    
+    try {
+      // Update auth user data if name changed
+      if (updates.full_name) {
+        const { error } = await supabase.auth.updateUser({
+          data: { full_name: updates.full_name } as UserMetadata
+        })
+        if (error) throw error
+      }
+
+      // Update profile in database
+      await usersApi.updateUserProfile(user.id, updates)
+      setProfile(prev => ({
+        ...prev,
+        ...updates,
+        id: prev?.id || user.id,
+        updated_at: new Date().toISOString()
+      } as UserProfile))
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      return { success: false, error: error as Error }
+    }
+  }, [user])
+
   const value = {
     user,
     session,
@@ -162,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signOut,
     resetPassword,
+    updateProfile,
   }
 
   return (

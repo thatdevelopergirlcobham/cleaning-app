@@ -1,8 +1,7 @@
-import React from "react";
- import { Link } from "react-router-dom";
- import { Check, ChevronLeft, ChevronRight } from "lucide-react";
- import { Swiper, SwiperSlide } from "swiper/react";
- import { Navigation, Pagination } from "swiper/modules";
+import { Link } from "react-router-dom";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination } from "swiper/modules";
 // @ts-ignore
 import "swiper/css";
 // @ts-ignore

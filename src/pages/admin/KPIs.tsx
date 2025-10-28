@@ -16,7 +16,8 @@ import {
   MapPin
 } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
-import { reportsApi } from '../../api/reports'
+import { getReports } from '../../api/reports';
+import type { Report } from '../../api/reports';
 import { eventsApi } from '../../api/events'
 import { usersApi } from '../../api/users'
 import { agentsApi } from '../../api/agents'
@@ -43,6 +44,8 @@ interface AnalyticsData {
   }
 }
 
+// Using imported Report type
+
 const KPIs: React.FC = () => {
   const { addToast } = useToast()
   const [analytics, setAnalytics] = useState<AnalyticsData>({
@@ -63,28 +66,44 @@ const KPIs: React.FC = () => {
   })
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d')
+  const [reports, setReports] = useState<Report[]>([])
+
+  const fetchReports = useCallback(async () => {
+    try {
+      const data = await getReports();
+      setReports(data);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   const loadAnalyticsData = useCallback(async () => {
     setLoading(true)
     try {
       const [
-        reportsResponse,
         eventsResponse,
         usersResponse,
         agentsResponse
       ] = await Promise.all([
-        reportsApi.getApprovedReports(),
         eventsApi.getUpcomingEvents(),
         usersApi.getAllUsers(),
         agentsApi.getAvailableAgents()
       ])
 
-      const allReports = reportsResponse || []
       const allEvents = eventsResponse || []
       const allUsers = usersResponse || []
       const allAgents = agentsResponse || []
 
-      // Calculate analytics
+      // Calculate analytics using the reports state
+      const totalReports = reports.length;
+      const approvedReports = reports.filter(r => r.status === 'approved').length;
+      const rejectedReports = reports.filter(r => r.status === 'rejected').length;
+      const resolvedReports = reports.filter(r => r.status === 'resolved').length;
+      const pendingReports = reports.filter(r => r.status === 'pending').length;
 
       // Generate mock data for charts since we don't have historical data
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
@@ -107,11 +126,11 @@ const KPIs: React.FC = () => {
       ]
 
       setAnalytics({
-        totalReports: allReports.length,
-        approvedReports: allReports.filter((r: any) => r.status === 'approved').length,
-        rejectedReports: allReports.filter((r: any) => r.status === 'rejected').length,
-        resolvedReports: allReports.filter((r: any) => r.status === 'resolved').length,
-        pendingReports: allReports.filter((r: any) => r.status === 'pending').length,
+        totalReports,
+        approvedReports,
+        rejectedReports,
+        resolvedReports,
+        pendingReports,
         totalEvents: allEvents.length,
         totalUsers: allUsers.length,
         totalAgents: allAgents.length,

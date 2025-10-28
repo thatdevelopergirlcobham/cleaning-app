@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../contexts/ToastContext'
 
 const Auth: React.FC = () => {
