@@ -34,7 +34,7 @@ export interface ReportType {
   severity: 'low' | 'medium' | 'high';
   category: string;
   priority: 'low' | 'medium' | 'high';
-  area: string;
+  area?: string;
   tags: string[];
   is_anonymous?: boolean;
   resolution_status?: 'unresolved' | 'in_progress' | 'resolved' | 'reopened';
@@ -45,6 +45,8 @@ export interface ReportType {
     full_name: string;
     avatar_url: string;
   };
+  full_name?: string;
+  avatar_url?: string;
 }
 
 interface FeedProps {

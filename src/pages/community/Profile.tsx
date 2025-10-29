@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { User, Mail, Phone, Shield, Calendar, Edit, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { User as UserIcon, Mail, Phone, Shield, Calendar, Edit, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
+
+type FormData = {
+  full_name: string;
+  phone: string;
+};
 
 const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    full_name: profile?.full_name || '',
-    phone: profile?.phone || '',
+  const [formData, setFormData] = useState<FormData>({
+    full_name: '',
+    phone: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        phone: profile.phone || '',
+      });
+    }
+  }, [profile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -21,12 +37,35 @@ const Profile: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    
     try {
-      await updateProfile(formData);
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating profile:', error);
+      const { success, error } = await updateProfile({
+        full_name: formData.full_name,
+        phone: formData.phone,
+      });
+      
+      if (success) {
+        setIsEditing(false);
+      } else if (error) {
+        setError(error.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      full_name: profile?.full_name || '',
+      phone: profile?.phone || '',
+    });
+    setIsEditing(false);
+    setError(null);
   };
 
   return (
@@ -39,7 +78,7 @@ const Profile: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-2xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-            <User className="w-9 h-9 text-primary" />
+            <UserIcon className="w-9 h-9 text-primary" />
           </div>
           <div className="flex-1 w-full">
             {isEditing ? (
@@ -139,30 +178,43 @@ const Profile: React.FC = () => {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-400 text-red-700">
+            <p>{error}</p>
+          </div>
+        )}
         <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
           {isEditing ? (
             <>
               <button
                 type="button"
-                onClick={() => {
-                  setIsEditing(false);
-                  setFormData({
-                    full_name: profile?.full_name || '',
-                    phone: profile?.phone || ''
-                  });
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                onClick={handleCancel}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 flex items-center"
+                disabled={isLoading}
               >
                 <X className="w-4 h-4 mr-1 inline" /> Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 flex items-center"
+                disabled={isLoading || !formData.full_name.trim()}
               >
-                <Check className="w-4 h-4 mr-1 inline" /> Save Changes
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-1 inline" /> Save Changes
+                  </>
+                )}
               </button>
-            </>
+            </> 
           ) : (
             <button
               type="button"

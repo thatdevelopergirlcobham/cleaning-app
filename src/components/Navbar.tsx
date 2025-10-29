@@ -35,15 +35,15 @@ const Navbar: React.FC = () => {
           {/* Center Navigation Links */}
           <div className="flex-1 flex items-center justify-center">
             {user ? (
-              <div className="hidden md:flex items-center space-x-6">
-                <Link to="/home" className="text-white hover:text-lime-300 flex items-center">
+              <div className="hidden md:flex items-center space-x-8">
+                <Link to="/home" className="text-white hover:text-lime-300 flex items-center transition-colors">
                   <Home className="w-5 h-5 mr-1" /> Home
                 </Link>
-                <Link to="/report" className="text-white hover:text-lime-300">
-                  Report Issue
+                <Link to="/map" className="text-white hover:text-lime-300 flex items-center transition-colors">
+                  <span className="w-5 h-5 mr-1">🗺️</span> Map
                 </Link>
-                <Link to="/events" className="text-white hover:text-lime-300">
-                  Events
+                <Link to="/upcycle" className="text-white hover:text-lime-300 flex items-center transition-colors">
+                  <span className="w-5 h-5 mr-1">♻️</span> Upcycle
                 </Link>
               </div>
             ) : (
