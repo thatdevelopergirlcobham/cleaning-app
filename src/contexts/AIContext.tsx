@@ -88,17 +88,33 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
     setError(null)
 
     try {
-      // For now, we'll use general context for chat messages
-      // In a full implementation, you'd want to analyze the message intent
-      const request: EcoBotRequest = {
-        context: 'general',
-        userInput: message
+      console.log('Sending message to Gemini:', message)
+      
+      // Call Gemini API directly for chat
+      const botResponse = await aiApi.chatWithEcoBot(message)
+      
+      console.log('Received response from Gemini:', botResponse)
+      
+      // Convert the response to an AIInsight format
+      const responseInsight: AIInsight = {
+        type: 'eco_tip',
+        content: botResponse,
+        confidence: 0.9
       }
 
-      await getInsights(request)
+      // Add the bot's response to current insights
+      setCurrentInsights(prev => [...prev, responseInsight])
     } catch (err) {
       setError('Failed to send message. Please try again.')
       console.error('AI Send Message Error:', err)
+      
+      // Fallback response on error
+      const fallbackInsight: AIInsight = {
+        type: 'eco_tip',
+        content: "I'm having trouble connecting right now. Please try again in a moment!",
+        confidence: 0.5
+      }
+      setCurrentInsights(prev => [...prev, fallbackInsight])
     } finally {
       setIsLoading(false)
     }

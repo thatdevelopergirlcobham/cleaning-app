@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Upload Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            background: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #059669;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+        }
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Supabase Storage Upload Test</h1>
+    <p>This will test if your storage policies are configured correctly.</p>
+    
+    <input type="file" id="fileInput" accept="image/*">
+    <br>
+    <button onclick="testUpload()">Test Upload (Anonymous)</button>
+    <button onclick="checkPolicies()">Check Policies</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://hajgpcqbfougojrpaprr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function showResult(message, isSuccess) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = isSuccess ? 'success' : 'error';
+        }
+
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showResult('❌ Please select a file first', false);
+                return;
+            }
+
+            showResult('⏳ Uploading...', true);
+
+            try {
+                const fileName = `test-${Date.now()}.${file.name.split('.').pop()}`;
+                const filePath = `report-images/${fileName}`;
+
+                console.log('Starting upload:', filePath);
+                console.log('File:', file.name, file.size, file.type);
+
+                const { data, error } = await supabase.storage
+                    .from('images')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (error) {
+                    console.error('Upload error:', error);
+                    showResult(`❌ Upload Failed\n\nError: ${error.message}\nStatus: ${error.statusCode}\n\nDetails: ${JSON.stringify(error, null, 2)}`, false);
+                    return;
+                }
+
+                console.log('Upload success:', data);
+
+                const { data: urlData } = supabase.storage
+                    .from('images')
+                    .getPublicUrl(filePath);
+
+                showResult(`✅ Upload Successful!\n\nPath: ${data.path}\nPublic URL: ${urlData.publicUrl}\n\nThe storage policies are working correctly!`, true);
+
+            } catch (err) {
+                console.error('Exception:', err);
+                showResult(`❌ Exception: ${err.message}`, false);
+            }
+        }
+
+        async function checkPolicies() {
+            showResult('⏳ Checking storage configuration...', true);
+            
+            try {
+                // Try to list files (should work with public read policy)
+                const { data, error } = await supabase.storage
+                    .from('images')
+                    .list('report-images', {
+                        limit: 5
+                    });
+
+                if (error) {
+                    showResult(`❌ Cannot access storage\n\nError: ${error.message}\n\nThe 'images' bucket may not exist or policies are not configured.`, false);
+                    return;
+                }
+
+                showResult(`✅ Storage is accessible!\n\nFound ${data.length} files in report-images folder.\n\nPublic read policy is working.`, true);
+
+            } catch (err) {
+                showResult(`❌ Exception: ${err.message}`, false);
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            checkPolicies();
+        };
+    </script>
+</body>
+</html>

@@ -8,6 +8,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-client-info': 'supabase-js-web'
+    },
+    fetch: (url, options = {}) => {
+      return fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(60000) // 60 second timeout
+      })
+    }
   }
 })
 
@@ -160,7 +171,7 @@ export type Database = {
           message: string
           type: 'report_approved' | 'report_rejected' | 'report_submitted' | 'system' | 'ai_insight'
           read: boolean
-          data?: any
+          data?: Record<string, unknown>
           created_at: string
           updated_at: string
         }
@@ -171,7 +182,7 @@ export type Database = {
           message: string
           type?: 'report_approved' | 'report_rejected' | 'report_submitted' | 'system' | 'ai_insight'
           read?: boolean
-          data?: any
+          data?: Record<string, unknown>
           created_at?: string
           updated_at?: string
         }
@@ -182,7 +193,7 @@ export type Database = {
           message?: string
           type?: 'report_approved' | 'report_rejected' | 'report_submitted' | 'system' | 'ai_insight'
           read?: boolean
-          data?: any
+          data?: Record<string, unknown>
           created_at?: string
           updated_at?: string
         }

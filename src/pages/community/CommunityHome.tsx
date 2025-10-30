@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../api/supabaseClient';
 import ReportModal from '../../components/community/ReportModal';
-import type { ReportSubmitData } from '../../components/community/ReportModal';
+import type { ReportInsert } from '../../api/reports';
 import ReportDetailsModal from '../../components/community/ReportDetailsModal';
 
 interface Report {
@@ -38,6 +38,8 @@ const CommunityHome: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const isMounted = useRef(true);
 
   // Cleanup function
@@ -47,21 +49,68 @@ const CommunityHome: React.FC = () => {
     };
   }, []);
 
+  // Request location permission on mount
+  useEffect(() => {
+    const requestLocationPermission = async () => {
+      if (!navigator.geolocation) {
+        console.log('Geolocation not supported');
+        return;
+      }
+
+      try {
+        // Check if permission API is available
+        if ('permissions' in navigator) {
+          const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+          setLocationPermission(result.state);
+          
+          if (result.state === 'prompt') {
+            // Show custom prompt to user
+            setShowLocationPrompt(true);
+          }
+          
+          // Listen for permission changes
+          result.addEventListener('change', () => {
+            setLocationPermission(result.state);
+          });
+        } else if (navigator.geolocation) {
+          // Fallback: try to get location directly
+          navigator.geolocation.getCurrentPosition(
+            () => setLocationPermission('granted'),
+            () => setLocationPermission('denied')
+          );
+        }
+      } catch (error) {
+        console.error('Error checking location permission:', error);
+      }
+    };
+
+    requestLocationPermission();
+  }, []);
+
   // Fetch reports from Supabase with timeout
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isMounted.current && isLoading) {
-        setError('Taking longer than expected to load. Please check your connection.');
-        setIsLoading(false);
-      }
-    }, 10000); // 10 second timeout
-
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let isLoadingRef = true;
+    
     const fetchReports = async () => {
       try {
+        if (!isMounted.current) return;
+        
+        console.log('Fetching reports from Supabase...');
         setIsLoading(true);
         setError(null);
         
-        const { data, error } = await supabase
+        // Set up timeout
+        timeoutId = setTimeout(() => {
+          if (isMounted.current && isLoadingRef) {
+            console.warn('Request timeout after 10 seconds');
+            setError('Taking longer than expected to load. Please check your connection.');
+            setIsLoading(false);
+            isLoadingRef = false;
+          }
+        }, 10000); // 10 second timeout
+        
+        const { data, error: fetchError } = await supabase
           .from('reports')
           .select(`
             *,
@@ -73,25 +122,27 @@ const CommunityHome: React.FC = () => {
           .eq('status', 'approved')
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (fetchError) {
+          console.error('Supabase fetch error:', fetchError);
+          throw fetchError;
+        }
         
         if (isMounted.current) {
-          // Type assertion since we know the shape matches our Report interface
+          clearTimeout(timeoutId);
           const reports = data as unknown as Report[];
+          console.log(`Successfully fetched ${reports.length} reports`);
           setReports(reports);
-          if (reports.length === 0) {
-            setError('No reports found. Be the first to report an issue!');
-          }
+          setIsLoading(false);
+          isLoadingRef = false;
         }
       } catch (err) {
-        console.error('Error fetching reports:', err);
-        if (isMounted.current) {
-          setError('Failed to load reports. Please check your connection and try again.');
-        }
-      } finally {
+        const error = err as Error;
+        console.error('Error fetching reports:', error);
         if (isMounted.current) {
           clearTimeout(timeoutId);
+          setError(error.message || 'Failed to load reports. Please check your connection and try again.');
           setIsLoading(false);
+          isLoadingRef = false;
         }
       }
     };
@@ -99,9 +150,11 @@ const CommunityHome: React.FC = () => {
     fetchReports();
 
     return () => {
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
-  }, [isLoading]);
+  }, []); // Empty dependency array - runs once on mount
 
   // Set up real-time subscription
   useEffect(() => {
@@ -145,38 +198,93 @@ const CommunityHome: React.FC = () => {
     );
   });
 
-  const handleReportSubmit = async (data: ReportSubmitData): Promise<boolean> => {
+  const handleReportSubmit = async (data: ReportInsert): Promise<boolean> => {
     try {
+      console.log('Submitting report:', data);
+      console.log('User ID:', data.user_id);
       setError(null);
-      const reportData = {
-        ...data,
-        status: 'pending' as const,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        votes: 0,
-        comments_count: 0,
-        is_resolved: false
-      };
       
-      const { error } = await supabase
+      console.log('Calling Supabase insert...');
+      const { data: insertedData, error: insertError } = await supabase
         .from('reports')
-        .insert([reportData])
+        .insert([data])
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('Supabase response received');
+      console.log('Insert data:', insertedData);
+      console.log('Insert error:', insertError);
+
+      if (insertError) {
+        console.error('Insert error details:', insertError);
+        console.error('Error code:', insertError.code);
+        console.error('Error message:', insertError.message);
+        throw insertError;
+      }
       
+      console.log('Report submitted successfully:', insertedData);
       setShowReportModal(false);
       return true;
     } catch (err) {
-      console.error('Error submitting report:', err);
-      setError('Failed to submit report. Please try again.');
+      const error = err as Error;
+      console.error('Error submitting report:', error);
+      console.error('Full error object:', err);
+      setError(error.message || 'Failed to submit report. Please try again.');
       return false;
     }
   };
 
+  const handleRequestLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log('Location granted:', position.coords);
+        setLocationPermission('granted');
+        setShowLocationPrompt(false);
+      },
+      (error) => {
+        console.error('Location denied:', error);
+        setLocationPermission('denied');
+        setShowLocationPrompt(false);
+      }
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Location Permission Prompt */}
+      {showLocationPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Enable Location Services</h3>
+              <p className="text-gray-600 mb-6">
+                We need your location to show nearby waste issues and help you report problems in your area.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLocationPrompt(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Not Now
+                </button>
+                <button
+                  onClick={handleRequestLocation}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                >
+                  Allow Location
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showReportModal && (
         <ReportModal
           isOpen={showReportModal}
@@ -251,7 +359,7 @@ const CommunityHome: React.FC = () => {
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-600"></div>
             <p className="text-gray-600">Loading community reports...</p>
           </div>
-        ) : error && reports.length === 0 ? (
+        ) : reports.length === 0 ? (
           <div className="text-center py-16">
             <div className="mx-auto w-24 h-24 text-gray-400 mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -259,7 +367,7 @@ const CommunityHome: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-1">No reports found</h3>
-            <p className="text-gray-500 mb-6">{error || 'Be the first to report an issue in your community!'}</p>
+            <p className="text-gray-500 mb-6">Be the first to report an issue in your community!</p>
             <button
               onClick={() => setShowReportModal(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"

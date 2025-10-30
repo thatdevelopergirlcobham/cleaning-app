@@ -256,7 +256,79 @@ class AIApiService {
     }
   }
 
-  // 6. Analyze KPI data
+  // 6. Chat with EcoBot (general conversation)
+  async chatWithEcoBot(userMessage: string): Promise<string> {
+    console.log('ChatWithEcoBot called with:', userMessage);
+    console.log('API Key available:', !!GEMINI_API_KEY);
+
+    // Always use real API if key is available
+    if (!GEMINI_API_KEY) {
+      console.log('No API key, using mock response');
+      return this.getMockChatResponse(userMessage);
+    }
+
+    try {
+      const prompt = `You are EcoBot, an AI assistant for a waste management app in Calabar, Nigeria called CleanCal. 
+      You help users with:
+      - Waste sorting and recycling tips
+      - Information about waste categories (plastic, organic, electronic, etc.)
+      - Proper disposal methods
+      - Environmental impact of waste
+      - Community cleanup events
+      - Waste management best practices
+      
+      User message: ${userMessage}
+      
+      Provide a helpful, friendly, and concise response (2-3 sentences max).`;
+
+      console.log('Calling Gemini API...');
+      
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 256,
+          }
+        })
+      });
+
+      console.log('Gemini API response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API error response:', errorText);
+        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Gemini API response data:', data);
+      
+      const botResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
+      if (botResponse) {
+        console.log('Got response from Gemini:', botResponse);
+        return botResponse;
+      } else {
+        console.log('No response text in Gemini data, using mock');
+        return this.getMockChatResponse(userMessage);
+      }
+    } catch (error) {
+      console.error('AI Chat Error:', error);
+      console.log('Falling back to mock response');
+      return this.getMockChatResponse(userMessage);
+    }
+  }
+
+  // 7. Analyze KPI data
   async analyzeKPIs(kpiData: EcoBotRequest['kpiData']): Promise<AIInsight> {
     if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSyCuoCwkVC_gDCZh4kb_Pr7k8QCgW4_-KgA') {
       return this.getMockKPIAnalysis(kpiData);
@@ -415,24 +487,50 @@ class AIApiService {
     return 'General Waste';
   }
 
-  private getMockReportPriority(_reportData: { title: string; description: string; location: { lat: number; lng: number } }): 'low' | 'medium' | 'high' | 'urgent' {
+  private getMockReportPriority(): 'low' | 'medium' | 'high' | 'urgent' {
     // Simple mock priority based on keywords
     return 'medium';
   }
 
+  private getMockChatResponse(userMessage: string): string {
+    const lowerMessage = userMessage.toLowerCase();
+    
+    if (lowerMessage.includes('recycle') || lowerMessage.includes('recycling')) {
+      return "Great question about recycling! In Calabar, you can recycle plastics, paper, and metals at the Calabar Recycling Center on Marian Road. Remember to clean and sort your recyclables before dropping them off!";
+    }
+    
+    if (lowerMessage.includes('plastic')) {
+      return "Plastic waste is a major concern! Try to reduce single-use plastics, reuse containers, and recycle when possible. Plastic bottles, bags, and containers can be recycled at designated centers in Calabar.";
+    }
+    
+    if (lowerMessage.includes('organic') || lowerMessage.includes('food')) {
+      return "Organic waste like food scraps can be composted! This reduces landfill waste and creates nutrient-rich soil. You can start a small compost bin at home or check if your community has composting programs.";
+    }
+    
+    if (lowerMessage.includes('event') || lowerMessage.includes('cleanup')) {
+      return "Community cleanup events are a great way to make a difference! Check the Events section in the app to join upcoming cleanups, or create your own event to rally your neighbors.";
+    }
+    
+    if (lowerMessage.includes('report') || lowerMessage.includes('waste')) {
+      return "To report waste issues, go to the Community section and click 'Report Issue'. Include a photo, location, and description to help our team respond quickly!";
+    }
+    
+    return "I'm EcoBot, your waste management assistant! I can help with recycling tips, waste sorting, proper disposal methods, and community events. What would you like to know?";
+  }
+
   // === PARSING METHODS ===
 
-  private parseGeminiResponse(_data: any): AIInsight[] {
+  private parseGeminiResponse(): AIInsight[] {
     // This would parse the actual Gemini response format
     // For now, return mock data
     return this.getMockReportInsights();
   }
 
-  private parseEventSuggestions(_data: any): AIInsight[] {
+  private parseEventSuggestions(): AIInsight[] {
     return this.getMockEventSuggestions();
   }
 
-  private parseResponseTemplates(_data: any): string[] {
+  private parseResponseTemplates(): string[] {
     return ['Template 1', 'Template 2', 'Template 3'];
   }
 
@@ -444,9 +542,12 @@ class AIApiService {
     };
   }
 
-  private parseCategoryResponse(data: any): string | null {
+  private parseCategoryResponse(data: Record<string, unknown>): string | null {
     try {
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      // Type guard for Gemini response structure
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
       if (text) {
         // Clean up the response and match against known categories
         const cleanText = text.replace(/["']/g, '').trim();
@@ -472,9 +573,12 @@ class AIApiService {
     return null;
   }
 
-  private parsePriorityResponse(data: any): 'low' | 'medium' | 'high' | 'urgent' | null {
+  private parsePriorityResponse(data: Record<string, unknown>): 'low' | 'medium' | 'high' | 'urgent' | null {
     try {
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.toLowerCase();
+      // Type guard for Gemini response structure
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.toLowerCase();
+      
       if (text && ['low', 'medium', 'high', 'urgent'].includes(text)) {
         return text as 'low' | 'medium' | 'high' | 'urgent';
       }
@@ -484,7 +588,7 @@ class AIApiService {
     return null;
   }
 
-  private parseKPIAnalysis(_data: any): AIInsight {
+  private parseKPIAnalysis(): AIInsight {
     return this.getMockKPIAnalysis();
   }
 }
