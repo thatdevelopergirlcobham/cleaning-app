@@ -37,8 +37,29 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const toggleAIChat = () => setIsAIChatOpen(!isAIChatOpen)
-  const openAIChat = () => setIsAIChatOpen(true)
+  const toggleAIChat = () => {
+    if (!isAIChatOpen && currentInsights.length === 0) {
+      // Show welcome message when opening chat for the first time
+      setCurrentInsights([{
+        type: 'eco_tip',
+        content: "Hi! I'm EcoBot, your AI assistant for waste management in Calabar. I can help you with recycling tips, waste sorting, proper disposal methods, and community events. What would you like to know?",
+        confidence: 1.0
+      }])
+    }
+    setIsAIChatOpen(!isAIChatOpen)
+  }
+  
+  const openAIChat = () => {
+    if (currentInsights.length === 0) {
+      setCurrentInsights([{
+        type: 'eco_tip',
+        content: "Hi! I'm EcoBot, your AI assistant for waste management in Calabar. I can help you with recycling tips, waste sorting, proper disposal methods, and community events. What would you like to know?",
+        confidence: 1.0
+      }])
+    }
+    setIsAIChatOpen(true)
+  }
+  
   const closeAIChat = () => setIsAIChatOpen(false)
 
   const getInsights = async (request: EcoBotRequest) => {
@@ -105,16 +126,18 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
       // Add the bot's response to current insights
       setCurrentInsights(prev => [...prev, responseInsight])
     } catch (err) {
-      setError('Failed to send message. Please try again.')
+      const error = err as Error
+      const errorMessage = error.message || 'Failed to send message. Please try again.'
+      setError(errorMessage)
       console.error('AI Send Message Error:', err)
       
-      // Fallback response on error
-      const fallbackInsight: AIInsight = {
+      // Show error message in chat
+      const errorInsight: AIInsight = {
         type: 'eco_tip',
-        content: "I'm having trouble connecting right now. Please try again in a moment!",
+        content: `❌ ${errorMessage}`,
         confidence: 0.5
       }
-      setCurrentInsights(prev => [...prev, fallbackInsight])
+      setCurrentInsights(prev => [...prev, errorInsight])
     } finally {
       setIsLoading(false)
     }

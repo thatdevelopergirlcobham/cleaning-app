@@ -38,8 +38,6 @@ const CommunityHome: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const isMounted = useRef(true);
 
   // Cleanup function
@@ -49,43 +47,7 @@ const CommunityHome: React.FC = () => {
     };
   }, []);
 
-  // Request location permission on mount
-  useEffect(() => {
-    const requestLocationPermission = async () => {
-      if (!navigator.geolocation) {
-        console.log('Geolocation not supported');
-        return;
-      }
-
-      try {
-        // Check if permission API is available
-        if ('permissions' in navigator) {
-          const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-          setLocationPermission(result.state);
-          
-          if (result.state === 'prompt') {
-            // Show custom prompt to user
-            setShowLocationPrompt(true);
-          }
-          
-          // Listen for permission changes
-          result.addEventListener('change', () => {
-            setLocationPermission(result.state);
-          });
-        } else if (navigator.geolocation) {
-          // Fallback: try to get location directly
-          navigator.geolocation.getCurrentPosition(
-            () => setLocationPermission('granted'),
-            () => setLocationPermission('denied')
-          );
-        }
-      } catch (error) {
-        console.error('Error checking location permission:', error);
-      }
-    };
-
-    requestLocationPermission();
-  }, []);
+  // Location permission is handled in ReportModal when user creates a report
 
   // Fetch reports from Supabase with timeout
   useEffect(() => {
@@ -108,22 +70,30 @@ const CommunityHome: React.FC = () => {
             setIsLoading(false);
             isLoadingRef = false;
           }
-        }, 10000); // 10 second timeout
+        }, 5000); // 5 second timeout
+        
+        console.log('Attempting to fetch from Supabase...');
+        console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
         
         const { data, error: fetchError } = await supabase
           .from('reports')
-          .select(`
-            *,
-            user_profiles (
-              full_name,
-              avatar_url
-            )
-          `)
-          .eq('status', 'approved')
-          .order('created_at', { ascending: false });
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        console.log('Query completed. Data:', data, 'Error:', fetchError);
 
         if (fetchError) {
           console.error('Supabase fetch error:', fetchError);
+          console.error('Error code:', fetchError.code);
+          console.error('Error message:', fetchError.message);
+          console.error('Error details:', fetchError.details);
+          
+          // If it's an RLS error, show helpful message
+          if (fetchError.message?.includes('row-level security') || fetchError.code === '42501') {
+            throw new Error('Database permissions not set up. Please run the SQL script in Supabase.');
+          }
+          
           throw fetchError;
         }
         
@@ -164,8 +134,7 @@ const CommunityHome: React.FC = () => {
         { 
           event: '*',
           schema: 'public',
-          table: 'reports',
-          filter: 'status=eq.approved'
+          table: 'reports'
         } as const, 
         (payload) => {
           if (!isMounted.current) return;
@@ -223,6 +192,13 @@ const CommunityHome: React.FC = () => {
       }
       
       console.log('Report submitted successfully:', insertedData);
+      
+      // Add the new report to the list immediately
+      if (insertedData) {
+        setReports(prev => [insertedData as unknown as Report, ...prev]);
+        console.log('Report added to list');
+      }
+      
       setShowReportModal(false);
       return true;
     } catch (err) {
@@ -234,57 +210,8 @@ const CommunityHome: React.FC = () => {
     }
   };
 
-  const handleRequestLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        console.log('Location granted:', position.coords);
-        setLocationPermission('granted');
-        setShowLocationPrompt(false);
-      },
-      (error) => {
-        console.error('Location denied:', error);
-        setLocationPermission('denied');
-        setShowLocationPrompt(false);
-      }
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Location Permission Prompt */}
-      {showLocationPrompt && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
-            <div className="text-center">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Enable Location Services</h3>
-              <p className="text-gray-600 mb-6">
-                We need your location to show nearby waste issues and help you report problems in your area.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowLocationPrompt(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
-                >
-                  Not Now
-                </button>
-                <button
-                  onClick={handleRequestLocation}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                >
-                  Allow Location
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showReportModal && (
         <ReportModal
           isOpen={showReportModal}

@@ -203,7 +203,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSubmit }) 
     console.log('Current session:', session ? 'Active' : 'No session (anonymous upload)');
     
     try {
-      setIsUploading(true);
       toast.info('Uploading image...');
       
       // Create unique filename
@@ -316,6 +315,8 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSubmit }) 
     if (!file) return;
     
     console.log('File selected:', file.name);
+    console.log('Setting isUploading to TRUE');
+    setIsUploading(true);
     
     // Create preview immediately for better UX
     const reader = new FileReader();
@@ -326,13 +327,17 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSubmit }) 
     
     // Upload the file and wait for completion
     console.log('Starting upload process...');
-    const uploadedUrl = await handleImageUpload(file);
-    console.log('Upload process finished. URL:', uploadedUrl);
-    
-    if (uploadedUrl) {
-      console.log('Image uploaded successfully, URL saved to form');
-    } else {
-      console.log('Image upload failed or was cancelled');
+    try {
+      const uploadedUrl = await handleImageUpload(file);
+      console.log('Upload process finished. URL:', uploadedUrl);
+      
+      if (uploadedUrl) {
+        console.log('Image uploaded successfully, URL saved to form');
+      } else {
+        console.log('Image upload failed or was cancelled');
+      }
+    } catch (error) {
+      console.error('Error in handleFileChange:', error);
     }
   };
   
@@ -379,13 +384,19 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSubmit }) 
     // Validation: Check if image is still uploading
     if (isUploading) {
       console.log('Blocked: Image still uploading');
-      toast.warning('Image is still uploading. Please wait or remove the image to submit without it.');
+      toast.warning('Image is still uploading. Please wait...');
       return;
     }
     
-    // Validation: Check required fields
+    // Validation: Check required fields including image
     if (!formData.title.trim() || !formData.description.trim() || !formData.location) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Validation: Check if image is uploaded (REQUIRED)
+    if (!formData.image_url || !formData.image_url.trim()) {
+      toast.error("Please upload an image. Images are required for all reports.");
       return;
     }
 
@@ -670,7 +681,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSubmit }) 
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Upload Image (optional)
+                Upload Image <span className="text-red-500">*</span>
               </label>
               <div className="mt-1 flex items-center">
                 <label
