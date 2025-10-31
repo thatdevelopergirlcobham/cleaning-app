@@ -65,7 +65,8 @@ const AIChatBot: React.FC = () => {
     return (
       <button
         onClick={toggleAIChat}
-        className="fixed bottom-4 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center z-40"
+        // Raise above mobile nav (nav uses z-50) and move up from bottom so it's not covered
+        className="fixed bottom-20 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center z-60"
         aria-label="Open EcoBot Chat"
       >
         <MessageCircle className="w-6 h-6" />
@@ -74,7 +75,7 @@ const AIChatBot: React.FC = () => {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-[32rem] bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col z-40">
+    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 md:left-auto md:translate-x-0 md:right-4 w-11/12 md:w-96 h-[32rem] bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col z-60">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">

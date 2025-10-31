@@ -63,15 +63,15 @@ class AIApiService {
       return this.parseGeminiResponse(data);
     } catch (error) {
       console.error('AI API Error:', error);
-      return this.getMockReportInsights(reportData);
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
   // No comma needed here
 
   // 2. Generate AI suggestions for events
   async getEventSuggestions(): Promise<AIInsight[]> {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSyCuoCwkVC_gDCZh4kb_Pr7k8QCgW4_-KgA') {
-      return this.getMockEventSuggestions();
+    if (!GEMINI_API_KEY) {
+      throw new Error('AI service not configured. Please add your API key.');
     }
 
     try {
@@ -103,14 +103,14 @@ class AIApiService {
       return this.parseEventSuggestions(data);
     } catch (error) {
       console.error('AI Event Suggestions Error:', error);
-      return this.getMockEventSuggestions();
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
 
   // 3. Generate response templates for admins
   async getResponseTemplates(context: 'report_approval' | 'report_rejection' | 'agent_assignment'): Promise<string[]> {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSyCuoCwkVC_gDCZh4kb_Pr7k8QCgW4_-KgA') {
-      return this.getMockResponseTemplates(context);
+    if (!GEMINI_API_KEY) {
+      throw new Error('AI service not configured. Please add your API key.');
     }
 
     try {
@@ -146,15 +146,14 @@ class AIApiService {
       return this.parseResponseTemplates(data);
     } catch (error) {
       console.error('AI Templates Error:', error);
-      return this.getMockResponseTemplates(context);
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
 
   // 4. Categorize a report based on title and description
   async categorizeReport(reportData: { title: string; description: string }): Promise<string> {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSyCuoCwkVC_gDCZh4kb_Pr7k8QCgW4_-KgA') {
-      console.warn('Gemini API key not configured, using fallback categorization');
-      return this.getMockReportCategory(reportData);
+    if (!GEMINI_API_KEY) {
+      throw new Error('AI service not configured. Please add your API key.');
     }
 
     try {
@@ -196,18 +195,17 @@ class AIApiService {
 
       const data = await response.json();
       const category = this.parseCategoryResponse(data);
-      return category || this.getMockReportCategory(reportData);
+      return category || 'General Waste';
     } catch (error) {
       console.error('AI Categorization Error:', error);
-      return this.getMockReportCategory(reportData);
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
 
   // 5. Get priority score for a report
   async getReportPriority(reportData: { title: string; description: string; location: { lat: number; lng: number } }): Promise<'low' | 'medium' | 'high' | 'urgent'> {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSyCuoCwkVC_gDCZh4kb_Pr7k8QCgW4_-KgA') {
-      console.warn('Gemini API key not configured, using fallback priority');
-      return this.getMockReportPriority(reportData);
+    if (!GEMINI_API_KEY) {
+      throw new Error('AI service not configured. Please add your API key.');
     }
 
     try {
@@ -249,17 +247,85 @@ class AIApiService {
 
       const data = await response.json();
       const priority = this.parsePriorityResponse(data);
-      return priority || this.getMockReportPriority(reportData);
+      return priority || 'medium';
     } catch (error) {
       console.error('AI Priority Analysis Error:', error);
-      return this.getMockReportPriority(reportData);
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
 
-  // 6. Analyze KPI data
+  // 6. Chat with EcoBot (general conversation)
+  async chatWithEcoBot(userMessage: string): Promise<string> {
+    console.log('ChatWithEcoBot called with:', userMessage);
+    console.log('API Key available:', !!GEMINI_API_KEY);
+
+    if (!GEMINI_API_KEY) {
+      throw new Error('AI service not configured. Please add your API key.');
+    }
+
+    try {
+      const prompt = `You are EcoBot, an AI assistant for a waste management app in Calabar, Nigeria called CleanCal. 
+      You help users with:
+      - Waste sorting and recycling tips
+      - Information about waste categories (plastic, organic, electronic, etc.)
+      - Proper disposal methods
+      - Environmental impact of waste
+      - Community cleanup events
+      - Waste management best practices
+      
+      User message: ${userMessage}
+      
+      Provide a helpful, friendly, and concise response (2-3 sentences max).`;
+
+      console.log('Calling Gemini API...');
+      
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 256,
+          }
+        })
+      });
+
+      console.log('Gemini API response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API error response:', errorText);
+        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Gemini API response data:', data);
+      
+      const botResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
+      if (botResponse) {
+        console.log('Got response from Gemini:', botResponse);
+        return botResponse;
+      } else {
+        throw new Error('No response from AI. Please try again.');
+      }
+    } catch (error) {
+      console.error('AI Chat Error:', error);
+      throw new Error('Network error. Please check your connection and try again.');
+    }
+  }
+
+  // 7. Analyze KPI data
   async analyzeKPIs(kpiData: EcoBotRequest['kpiData']): Promise<AIInsight> {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSyCuoCwkVC_gDCZh4kb_Pr7k8QCgW4_-KgA') {
-      return this.getMockKPIAnalysis(kpiData);
+    if (!GEMINI_API_KEY) {
+      throw new Error('AI service not configured. Please add your API key.');
     }
 
     try {
@@ -287,10 +353,10 @@ class AIApiService {
       }
 
       const data = await response.json();
-      return this.parseKPIAnalysis(data);
+      return this.parseKPIAnalysis(data, kpiData);
     } catch (error) {
       console.error('AI KPI Analysis Error:', error);
-      return this.getMockKPIAnalysis(kpiData);
+      throw new Error('Network error. Please check your connection and try again.');
     }
   }
   
@@ -336,104 +402,56 @@ class AIApiService {
     `;
   }
 
-  // === MOCK DATA METHODS ===
-  
-  private getMockReportInsights(_reportData?: EcoBotRequest['reportData']): AIInsight[] {
-    return [
-      {
-        type: 'eco_tip',
-        content: 'This appears to be plastic waste. Consider recycling at the Calabar Recycling Center on Marian Road.',
-        confidence: 0.85
-      },
-      {
-        type: 'contextual_insight',
-        content: 'This area has reported similar plastic waste issues. A community cleanup event could be beneficial.',
-        confidence: 0.78
-      }
-    ];
-  }
-
-  private getMockEventSuggestions(): AIInsight[] {
-    return [
-      {
-        type: 'event_suggestion',
-        content: 'Beach cleanup at Marina Resort - Collect plastic waste and educate on marine conservation.',
-        confidence: 0.9
-      },
-      {
-        type: 'event_suggestion',
-        content: 'School waste sorting workshop - Partner with local schools for educational cleanup activities.',
-        confidence: 0.85
-      }
-    ];
-  }
-
-  private getMockResponseTemplates(context: 'report_approval' | 'report_rejection' | 'agent_assignment'): string[] {
-    const templates = {
-      report_approval: [
-        'Thank you for your report! Our team will investigate and take appropriate action.',
-        'Your report has been approved and is now visible to the community and agents.',
-        'Great work spotting this issue! Our cleanup team will address it soon.'
-      ],
-      report_rejection: [
-        'Thank you for your report. After review, this doesn\'t meet our criteria for actionable waste issues.',
-        'We appreciate your concern, but this appears to be a private property matter.',
-        'Your report has been reviewed. Please provide more specific details for us to take action.'
-      ],
-      agent_assignment: [
-        'Agent assigned to your cleanup request. They will contact you within 24 hours.',
-        'A certified CleanCal agent has been dispatched to handle this waste issue.',
-        'Your request has been assigned to an available agent. You\'ll receive updates shortly.'
-      ]
-    };
-
-    return templates[context];
-  }
-
-  private getMockReportCategory(reportData: { title: string; description: string }): string {
-    const text = `${reportData.title} ${reportData.description}`.toLowerCase();
-
-    if (text.includes('plastic') || text.includes('bottle') || text.includes('bag')) {
-      return 'Plastic Waste';
-    }
-    if (text.includes('food') || text.includes('organic') || text.includes('leaves')) {
-      return 'Organic Waste';
-    }
-    if (text.includes('electronic') || text.includes('phone') || text.includes('computer')) {
-      return 'Electronic Waste';
-    }
-    if (text.includes('construction') || text.includes('cement') || text.includes('building')) {
-      return 'Construction Waste';
-    }
-    if (text.includes('chemical') || text.includes('toxic') || text.includes('hazardous')) {
-      return 'Hazardous Waste';
-    }
-    if (text.includes('dump') || text.includes('illegal')) {
-      return 'Illegal Dumping';
-    }
-
-    return 'General Waste';
-  }
-
-  private getMockReportPriority(_reportData: { title: string; description: string; location: { lat: number; lng: number } }): 'low' | 'medium' | 'high' | 'urgent' {
-    // Simple mock priority based on keywords
-    return 'medium';
-  }
-
   // === PARSING METHODS ===
 
-  private parseGeminiResponse(_data: any): AIInsight[] {
-    // This would parse the actual Gemini response format
-    // For now, return mock data
-    return this.getMockReportInsights();
+  private parseGeminiResponse(data: Record<string, unknown>): AIInsight[] {
+    try {
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
+      if (text) {
+        return [{
+          type: 'eco_tip',
+          content: text,
+          confidence: 0.9
+        }];
+      }
+    } catch (error) {
+      console.error('Error parsing Gemini response:', error);
+    }
+    return [];
   }
 
-  private parseEventSuggestions(_data: any): AIInsight[] {
-    return this.getMockEventSuggestions();
+  private parseEventSuggestions(data: Record<string, unknown>): AIInsight[] {
+    try {
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
+      if (text) {
+        return [{
+          type: 'event_suggestion',
+          content: text,
+          confidence: 0.85
+        }];
+      }
+    } catch (error) {
+      console.error('Error parsing event suggestions:', error);
+    }
+    return [];
   }
 
-  private parseResponseTemplates(_data: any): string[] {
-    return ['Template 1', 'Template 2', 'Template 3'];
+  private parseResponseTemplates(data: Record<string, unknown>): string[] {
+    try {
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
+      if (text) {
+        return text.split('\n').filter(line => line.trim().length > 0);
+      }
+    } catch (error) {
+      console.error('Error parsing templates:', error);
+    }
+    return [];
   }
 
   private getMockKPIAnalysis(_kpiData?: EcoBotRequest['kpiData']): AIInsight {
@@ -444,9 +462,12 @@ class AIApiService {
     };
   }
 
-  private parseCategoryResponse(data: any): string | null {
+  private parseCategoryResponse(data: Record<string, unknown>): string | null {
     try {
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      // Type guard for Gemini response structure
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
       if (text) {
         // Clean up the response and match against known categories
         const cleanText = text.replace(/["']/g, '').trim();
@@ -472,9 +493,12 @@ class AIApiService {
     return null;
   }
 
-  private parsePriorityResponse(data: any): 'low' | 'medium' | 'high' | 'urgent' | null {
+  private parsePriorityResponse(data: Record<string, unknown>): 'low' | 'medium' | 'high' | 'urgent' | null {
     try {
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.toLowerCase();
+      // Type guard for Gemini response structure
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.toLowerCase();
+      
       if (text && ['low', 'medium', 'high', 'urgent'].includes(text)) {
         return text as 'low' | 'medium' | 'high' | 'urgent';
       }
@@ -484,8 +508,29 @@ class AIApiService {
     return null;
   }
 
-  private parseKPIAnalysis(_data: any): AIInsight {
-    return this.getMockKPIAnalysis();
+  private parseKPIAnalysis(data: Record<string, unknown>, kpiData?: EcoBotRequest['kpiData']): AIInsight {
+    try {
+      const candidates = data?.candidates as Array<{content?: {parts?: Array<{text?: string}>}}> | undefined;
+      const text = candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
+      if (text) {
+        return {
+          type: 'kpi_interpretation',
+          content: text,
+          confidence: 0.85
+        };
+      }
+    } catch (error) {
+      console.error('Error parsing KPI analysis:', error);
+    }
+    
+    // Fallback with basic analysis
+    const resolutionRate = kpiData ? ((kpiData.resolvedReports / kpiData.totalReports) * 100).toFixed(1) : '0';
+    return {
+      type: 'kpi_interpretation',
+      content: `Your platform shows ${kpiData?.totalReports || 0} total reports with a ${resolutionRate}% resolution rate.`,
+      confidence: 0.7
+    };
   }
 }
 

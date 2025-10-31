@@ -22,7 +22,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import type { LatLngTuple } from 'leaflet';
 import L from 'leaflet';
-import { CheckCircle, XCircle, MapPin, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, MapPin } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -136,9 +136,9 @@ export default function MapPage({ currentUser = { role: 'community' } }: { curre
           </div>
         </header>
 
-        <div className="grid grid-cols-12 gap-6">
-          <section className="col-span-8 rounded-2xl overflow-hidden shadow-sm">
-            <MapContainer center={center} zoom={13} style={{ height: '70vh', width: '100%' }}>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <section className="col-span-1 md:col-span-8 rounded-2xl overflow-hidden shadow-sm">
+            <MapContainer center={center} zoom={13} className="h-[60vh] md:h-[70vh] w-full">
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
               {filterVisibleReports().map((r) => (
@@ -167,7 +167,7 @@ export default function MapPage({ currentUser = { role: 'community' } }: { curre
             {/* <EcoBotFloatButton onOpen={() => setShowEcoBotPanel(true)} /> */}
           </section>
 
-          <aside className="col-span-4">
+          <aside className="col-span-1 md:col-span-4">
             <div className="rounded-2xl bg-white p-4 shadow-sm">
               <h2 className="text-lg font-heading">Report Feed</h2>
               <p className="text-sm text-slate-600 mb-3">Showing approved & resolved reports (community view)</p>
@@ -247,7 +247,7 @@ export default function MapPage({ currentUser = { role: 'community' } }: { curre
         ) */}
         {/* Selected report quick view */}
         {selectedReport && (
-          <div className="fixed left-6 bottom-6 w-80 rounded-2xl bg-white p-4 shadow-lg">
+          <div className="fixed left-1/2 md:left-6 transform -translate-x-1/2 md:translate-x-0 bottom-6 w-11/12 md:w-80 rounded-2xl bg-white p-4 shadow-lg">
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="font-heading">{selectedReport.title}</h4>

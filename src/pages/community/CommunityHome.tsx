@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../api/supabaseClient';
 import ReportModal from '../../components/community/ReportModal';
-import type { ReportSubmitData } from '../../components/community/ReportModal';
+import type { ReportInsert } from '../../api/reports';
 import ReportDetailsModal from '../../components/community/ReportDetailsModal';
 
 interface Report {
@@ -47,51 +47,72 @@ const CommunityHome: React.FC = () => {
     };
   }, []);
 
+  // Location permission is handled in ReportModal when user creates a report
+
   // Fetch reports from Supabase with timeout
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isMounted.current && isLoading) {
-        setError('Taking longer than expected to load. Please check your connection.');
-        setIsLoading(false);
-      }
-    }, 10000); // 10 second timeout
-
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let isLoadingRef = true;
+    
     const fetchReports = async () => {
       try {
+        if (!isMounted.current) return;
+        
+        console.log('Fetching reports from Supabase...');
         setIsLoading(true);
         setError(null);
         
-        const { data, error } = await supabase
+        // Set up timeout
+        timeoutId = setTimeout(() => {
+          if (isMounted.current && isLoadingRef) {
+            console.warn('Request timeout after 10 seconds');
+            setError('Taking longer than expected to load. Please check your connection.');
+            setIsLoading(false);
+            isLoadingRef = false;
+          }
+        }, 5000); // 5 second timeout
+        
+        console.log('Attempting to fetch from Supabase...');
+        console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+        
+        const { data, error: fetchError } = await supabase
           .from('reports')
-          .select(`
-            *,
-            user_profiles (
-              full_name,
-              avatar_url
-            )
-          `)
-          .eq('status', 'approved')
-          .order('created_at', { ascending: false });
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        console.log('Query completed. Data:', data, 'Error:', fetchError);
 
-        if (error) throw error;
+        if (fetchError) {
+          console.error('Supabase fetch error:', fetchError);
+          console.error('Error code:', fetchError.code);
+          console.error('Error message:', fetchError.message);
+          console.error('Error details:', fetchError.details);
+          
+          // If it's an RLS error, show helpful message
+          if (fetchError.message?.includes('row-level security') || fetchError.code === '42501') {
+            throw new Error('Database permissions not set up. Please run the SQL script in Supabase.');
+          }
+          
+          throw fetchError;
+        }
         
         if (isMounted.current) {
-          // Type assertion since we know the shape matches our Report interface
+          clearTimeout(timeoutId);
           const reports = data as unknown as Report[];
+          console.log(`Successfully fetched ${reports.length} reports`);
           setReports(reports);
-          if (reports.length === 0) {
-            setError('No reports found. Be the first to report an issue!');
-          }
+          setIsLoading(false);
+          isLoadingRef = false;
         }
       } catch (err) {
-        console.error('Error fetching reports:', err);
-        if (isMounted.current) {
-          setError('Failed to load reports. Please check your connection and try again.');
-        }
-      } finally {
+        const error = err as Error;
+        console.error('Error fetching reports:', error);
         if (isMounted.current) {
           clearTimeout(timeoutId);
+          setError(error.message || 'Failed to load reports. Please check your connection and try again.');
           setIsLoading(false);
+          isLoadingRef = false;
         }
       }
     };
@@ -99,9 +120,11 @@ const CommunityHome: React.FC = () => {
     fetchReports();
 
     return () => {
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
-  }, [isLoading]);
+  }, []); // Empty dependency array - runs once on mount
 
   // Set up real-time subscription
   useEffect(() => {
@@ -111,8 +134,7 @@ const CommunityHome: React.FC = () => {
         { 
           event: '*',
           schema: 'public',
-          table: 'reports',
-          filter: 'status=eq.approved'
+          table: 'reports'
         } as const, 
         (payload) => {
           if (!isMounted.current) return;
@@ -145,32 +167,45 @@ const CommunityHome: React.FC = () => {
     );
   });
 
-  const handleReportSubmit = async (data: ReportSubmitData): Promise<boolean> => {
+  const handleReportSubmit = async (data: ReportInsert): Promise<boolean> => {
     try {
+      console.log('Submitting report:', data);
+      console.log('User ID:', data.user_id);
       setError(null);
-      const reportData = {
-        ...data,
-        status: 'pending' as const,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        votes: 0,
-        comments_count: 0,
-        is_resolved: false
-      };
       
-      const { error } = await supabase
+      console.log('Calling Supabase insert...');
+      const { data: insertedData, error: insertError } = await supabase
         .from('reports')
-        .insert([reportData])
+        .insert([data])
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('Supabase response received');
+      console.log('Insert data:', insertedData);
+      console.log('Insert error:', insertError);
+
+      if (insertError) {
+        console.error('Insert error details:', insertError);
+        console.error('Error code:', insertError.code);
+        console.error('Error message:', insertError.message);
+        throw insertError;
+      }
+      
+      console.log('Report submitted successfully:', insertedData);
+      
+      // Add the new report to the list immediately
+      if (insertedData) {
+        setReports(prev => [insertedData as unknown as Report, ...prev]);
+        console.log('Report added to list');
+      }
       
       setShowReportModal(false);
       return true;
     } catch (err) {
-      console.error('Error submitting report:', err);
-      setError('Failed to submit report. Please try again.');
+      const error = err as Error;
+      console.error('Error submitting report:', error);
+      console.error('Full error object:', err);
+      setError(error.message || 'Failed to submit report. Please try again.');
       return false;
     }
   };
@@ -251,7 +286,7 @@ const CommunityHome: React.FC = () => {
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-600"></div>
             <p className="text-gray-600">Loading community reports...</p>
           </div>
-        ) : error && reports.length === 0 ? (
+        ) : reports.length === 0 ? (
           <div className="text-center py-16">
             <div className="mx-auto w-24 h-24 text-gray-400 mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -259,7 +294,7 @@ const CommunityHome: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-1">No reports found</h3>
-            <p className="text-gray-500 mb-6">{error || 'Be the first to report an issue in your community!'}</p>
+            <p className="text-gray-500 mb-6">Be the first to report an issue in your community!</p>
             <button
               onClick={() => setShowReportModal(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"

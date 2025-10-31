@@ -1,14 +1,17 @@
 import React, { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../contexts/ToastContext'
 
 const Auth: React.FC = () => {
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [searchParams] = useSearchParams()
+  const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const navigate = useNavigate()
   const { signIn, signUp } = useAuth()
   const { addToast } = useToast()
 
@@ -43,6 +46,11 @@ const Auth: React.FC = () => {
           title: 'Success',
           message: isSignUp ? 'Account created successfully!' : 'Signed in successfully!'
         })
+        
+        // Redirect to home page after successful authentication
+        setTimeout(() => {
+          navigate('/home')
+        }, 500) // Small delay to show the success message
       }
     } catch {
       addToast({

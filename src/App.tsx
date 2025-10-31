@@ -16,11 +16,13 @@ import AIChatBot from './components/common/AIChatBot'
 
 // Community Pages
 import CommunityHome from './pages/community/CommunityHome'
+import CommunityHomeTest from './pages/community/CommunityHomeTest'
 import ReportNew from './pages/community/ReportNew'
 import Events from './pages/community/Events'
 import AgentHire from './pages/community/AgentHire'
 import Profile from './pages/community/Profile'
 import MapPage from './pages/community/Map'
+import UpcyclingPage from './pages/community/UpcyclingPage'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -57,16 +59,11 @@ function App() {
                       <Route path="/about" element={<About />} />
 
                       {/* Authenticated User Routes */}
-                      <Route
-                        path="/home"
-                        element={
-                          // <ProtectedRoute>
-                            <CommunityHome />
-                          // </ProtectedRoute>
-                        }
-                      />
+                      <Route path="/home" element={<CommunityHome />} />
 
                       {/* Community Routes */}
+                      <Route path="/community" element={<CommunityHome />} />
+                      <Route path="/community-test" element={<CommunityHomeTest />} />
                       <Route path="/report" element={<ReportNew />} />
                       <Route path="/events" element={<Events />} />
                       <Route path="/agents" element={<AgentHire />} />
@@ -79,6 +76,7 @@ function App() {
                         }
                       />
                       <Route path="/map" element={<MapPage />} />
+                      <Route path='/upcycle' element={<UpcyclingPage/>}/>
 
                       {/* Admin Routes */}
                       <Route

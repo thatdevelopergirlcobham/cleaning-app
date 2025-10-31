@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { LogOut, User, Home, LogIn, UserPlus } from 'lucide-react';
@@ -6,6 +6,7 @@ import { LogOut, User, Home, LogIn, UserPlus } from 'lucide-react';
 const Navbar: React.FC = () => {
   const { user, signOut } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
   const handleSignOut = async (e: React.MouseEvent) => {
@@ -24,6 +25,27 @@ const Navbar: React.FC = () => {
     if (!email) return 'U';
     return email.substring(0, 2).toUpperCase();
   };
+
+  useEffect(() => {
+    function handleDocClick(e: MouseEvent) {
+      if (!isDropdownOpen) return
+      const target = e.target as Node
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsDropdownOpen(false)
+    }
+
+    document.addEventListener('click', handleDocClick)
+    document.addEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('click', handleDocClick)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [isDropdownOpen])
 
   return (
     <nav className="bg-green-900 top-0 z-50">
@@ -58,10 +80,10 @@ const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Right Side - Profile / Auth Buttons */}
+          {/* Right Side - Profile / Auth Buttons: visible on all sizes (mobile shows initials instead of menu) */}
           <div className="flex items-center space-x-4">
             {user ? (
-              <div className="relative">
+              <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -80,7 +102,7 @@ const Navbar: React.FC = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                     <Link
                       to="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <User className="w-4 h-4 mr-2" /> My Profile
@@ -115,10 +137,10 @@ const Navbar: React.FC = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-white focus:outline-none"
+            className="md:hidden text-white focus:outline-none ml-3"
             onClick={() => {}}
           >
-            <svg
+            {/* <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -131,7 +153,7 @@ const Navbar: React.FC = () => {
                 strokeWidth={2}
                 d="M4 6h16M4 12h16M4 18h16"
               />
-            </svg>
+            </svg> */}
           </button>
         </div>
       </div>
