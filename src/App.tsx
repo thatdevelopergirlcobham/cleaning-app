@@ -20,6 +20,7 @@ import ReportNew from './pages/community/ReportNew'
 import Events from './pages/community/Events'
 import AgentHire from './pages/community/AgentHire'
 import Profile from './pages/community/Profile'
+import MapPage from './pages/community/Map'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -77,6 +78,7 @@ function App() {
                           // </ProtectedRoute>
                         }
                       />
+                      <Route path="/map" element={<MapPage />} />
 
                       {/* Admin Routes */}
                       <Route
