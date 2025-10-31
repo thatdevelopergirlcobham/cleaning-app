@@ -52,7 +52,7 @@ export default function UpcyclingPage() {
       : upcyclingIdeas.filter((idea) => idea.category === filter);
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] dark:bg-gray-900 text-[#1E293B] dark:text-gray-100 p-6 md:p-10">
+    <div className="min-h-screen bg-[#F9FAFB] text-[#1E293B] p-6 md:p-10">
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto mb-10">
         <motion.h1
@@ -62,7 +62,7 @@ export default function UpcyclingPage() {
         >
           ♻️ Upcycling Ideas
         </motion.h1>
-        <p className="text-gray-600 dark:text-gray-300">
+        <p className="text-gray-600">
           Give waste a second life! Explore creative ways to turn everyday
           materials into useful, eco-friendly items.
         </p>
@@ -77,7 +77,7 @@ export default function UpcyclingPage() {
             className={`px-5 py-2 rounded-full text-sm font-medium transition ${
               filter === cat
                 ? "bg-green-600 text-white shadow-md"
-                : "bg-white dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border"
+                : "bg-green-900 text-white border"
             }`}
           >
             {cat}
@@ -90,24 +90,24 @@ export default function UpcyclingPage() {
         {filteredIdeas.map((idea, index) => (
           <motion.div
             key={idea.id}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition p-6 border border-gray-100 dark:border-gray-700"
+            className="bg-green-900 rounded-2xl shadow-sm hover:shadow-md transition p-6 border border-gray-100"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
             <div className="flex items-center gap-3 mb-4">
               {idea.icon}
-              <h2 className="font-semibold text-lg text-green-700 dark:text-green-400">
+              <h2 className="font-semibold text-lg text-lime-500">
                 {idea.title}
               </h2>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            <p className="text-sm text-gray-300 mb-3">
               {idea.description}
             </p>
-            <h3 className="text-xs uppercase text-gray-500 mb-2">
+            <h3 className="text-xs uppercase text-gray-200 mb-2">
               Materials Needed
             </h3>
-            <ul className="text-sm list-disc list-inside text-gray-700 dark:text-gray-200">
+            <ul className="text-sm list-disc list-inside text-gray-200">
               {idea.materials.map((mat, i) => (
                 <li key={i}>{mat}</li>
               ))}
@@ -126,7 +126,7 @@ export default function UpcyclingPage() {
         <h2 className="text-2xl font-semibold mb-3">
           Have your own upcycling idea?
         </h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-5">
+        <p className="text-gray-600 mb-5">
           Share your creativity and inspire the CleanCal community to make Calabar
           greener and cleaner!
         </p>
