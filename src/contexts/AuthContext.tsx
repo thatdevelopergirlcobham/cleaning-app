@@ -1,31 +1,9 @@
-import React, { createContext, useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import type { User, Session, AuthError, UserMetadata } from '@supabase/supabase-js'
 import { supabase } from '../api/supabaseClient'
 import { usersApi } from '../api/users'
-
-export interface UserProfile {
-  id: string
-  full_name: string
-  avatar_url?: string
-  phone?: string
-  role?: string
-  created_at?: string
-  updated_at?: string
-}
-
-export interface AuthContextType {
-  user: User | null
-  session: Session | null
-  profile: UserProfile | null
-  loading: boolean
-  signUp: (email: string, password: string, fullName: string) => Promise<{ user: User | null; error: AuthError | null }>
-  signIn: (email: string, password: string) => Promise<{ user: User | null; error: AuthError | null }>
-  signOut: () => Promise<{ error: AuthError | null }>
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: Error }>
-}
-
-export const AuthContext = createContext<AuthContextType | null>(null)
+import type { UserProfile } from './AuthContext.types'
+import { AuthContext } from './AuthContext.context'
 
 interface AuthProviderProps {
   children: React.ReactNode

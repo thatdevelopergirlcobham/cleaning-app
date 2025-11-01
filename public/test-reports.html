@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Test - Fetch Supabase Reports</title>
+    <style>
+      body { font-family: Inter, system-ui, Arial, sans-serif; background:#f7fafc; color:#0f172a; margin:0; padding:24px; }
+      .container { max-width:960px; margin:0 auto; background:white; padding:20px; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.08); }
+      h1 { margin:0 0 12px 0; font-size:20px; }
+      label { display:block; font-size:13px; margin-top:12px; color:#374151; }
+      input[type=text], textarea { width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:6px; margin-top:6px; box-sizing:border-box; }
+      button { margin-top:14px; background:#16a34a; color:white; padding:10px 14px; border:0; border-radius:6px; cursor:pointer; }
+      button:disabled { opacity:0.6; cursor:not-allowed; }
+      .result { margin-top:18px; }
+      pre { background:#0f172a; color:#e6fffa; padding:12px; border-radius:6px; overflow:auto; }
+      table { width:100%; border-collapse:collapse; margin-top:12px; }
+      th, td { text-align:left; padding:8px; border-bottom:1px solid #f1f5f9; font-size:13px; }
+      .muted { color:#6b7280; font-size:13px; }
+      .error { background:#fee2e2; color:#991b1b; padding:10px; border-radius:6px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Test: Fetch reports from Supabase</h1>
+
+      <p class="muted">Enter your Supabase project URL and anon key (use an anon key only for testing). This page will call the REST endpoint <code>/rest/v1/reports?select=*</code> and display results.</p>
+
+      <label for="url">Supabase URL</label>
+      <input id="url" type="text" placeholder="https://xxxx.supabase.co" />
+
+      <label for="key">Anon (public) API Key</label>
+      <input id="key" type="text" placeholder="eyJhbGci..." />
+
+      <label for="params">Optional query string (default: <code>?select=*&amp;order=created_at.desc&amp;limit=50</code>)</label>
+      <input id="params" type="text" value="?select=*&amp;order=created_at.desc&amp;limit=50" />
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="fetch">Fetch reports</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+
+      <div id="status" class="muted" style="margin-top:12px"></div>
+
+      <div id="result" class="result"></div>
+    </div>
+
+    <script>
+      const $url = document.getElementById('url');
+      const $key = document.getElementById('key');
+      const $params = document.getElementById('params');
+      const $fetch = document.getElementById('fetch');
+      const $clear = document.getElementById('clear');
+      const $status = document.getElementById('status');
+      const $result = document.getElementById('result');
+
+      function showStatus(msg) { $status.textContent = msg; }
+      function showError(msg) { $result.innerHTML = '<div class="error">' + (msg || 'Unknown error') + '</div>'; }
+      function showJSON(obj) { $result.innerHTML = '<pre>' + JSON.stringify(obj, null, 2) + '</pre>'; }
+
+      $clear.addEventListener('click', () => { $result.innerHTML = ''; $status.textContent = ''; });
+
+      $fetch.addEventListener('click', async () => {
+        const url = ($url.value || '').trim();
+        const key = ($key.value || '').trim();
+        const params = ($params.value || '?select=*').trim();
+
+        if (!url || !key) {
+          showError('Please provide both Supabase URL and anon key.');
+          return;
+        }
+
+        const endpoint = url.replace(/\/$/, '') + '/rest/v1/reports' + (params.startsWith('?') ? params : ('?' + params));
+
+        try {
+          showStatus('Fetching...');
+          $fetch.disabled = true;
+
+          const res = await fetch(endpoint, {
+            headers: {
+              'apikey': key,
+              'Authorization': 'Bearer ' + key,
+              'Accept': 'application/json'
+            }
+          });
+
+          const text = await res.text();
+
+          // Try parse JSON
+          let json = null;
+          try { json = JSON.parse(text); } catch (e) { json = null; }
+
+          showStatus('HTTP ' + res.status + (res.statusText ? ' - ' + res.statusText : ''));
+
+          if (!res.ok) {
+            showError('Request failed: ' + res.status + ' - ' + (json && json.message ? json.message : text));
+            return;
+          }
+
+          // If parsed JSON array, show table and count
+          if (Array.isArray(json)) {
+            $result.innerHTML = '<div class="muted">Total reports: ' + json.length + '</div>';
+            if (json.length > 0) {
+              const table = document.createElement('table');
+              const thead = document.createElement('thead');
+              thead.innerHTML = '<tr><th>Title</th><th>Created At</th><th>User ID</th><th>Image</th></tr>';
+              table.appendChild(thead);
+              const tbody = document.createElement('tbody');
+              json.forEach(r => {
+                const tr = document.createElement('tr');
+                const title = document.createElement('td'); title.textContent = r.title || '-';
+                const ca = document.createElement('td'); ca.textContent = r.created_at || '-';
+                const uid = document.createElement('td'); uid.textContent = r.user_id || '-';
+                const img = document.createElement('td'); img.textContent = r.image_url || '-';
+                tr.appendChild(title); tr.appendChild(ca); tr.appendChild(uid); tr.appendChild(img);
+                tbody.appendChild(tr);
+              });
+              table.appendChild(tbody);
+              $result.appendChild(table);
+            }
+          } else {
+            showJSON(json || text);
+          }
+
+        } catch (err) {
+          showError('Fetch error: ' + (err && err.message ? err.message : String(err)));
+        } finally {
+          $fetch.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

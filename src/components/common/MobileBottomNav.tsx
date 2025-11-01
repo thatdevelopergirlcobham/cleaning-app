@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Calendar, Users, User } from 'lucide-react'
+import { Home, Calendar, Users, User, Map } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
 const MobileBottomNav: React.FC = () => {
@@ -17,16 +17,22 @@ const MobileBottomNav: React.FC = () => {
       requiresAuth: false,
     },
     {
+      path: '/hire-cleaners',
+      icon: Users,
+      label: 'Hire',
+      requiresAuth: false,
+    },
+    {
+      path: '/map',
+      icon: Map,
+      label: 'Map',
+      requiresAuth: false,
+    },
+    {
       path: '/events',
       icon: Calendar,
       label: 'Events',
       requiresAuth: false,
-    },
-    {
-      path: '/community',
-      icon: Users,
-      label: 'Community',
-      requiresAuth: true,
     },
     {
       path: '/profile',
@@ -42,7 +48,7 @@ const MobileBottomNav: React.FC = () => {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-      <div className="grid grid-cols-4 h-16">
+      <div className="grid grid-cols-5 h-16">
         {navItems.map((item) => {
           if (item.requiresAuth && !user) return null
 

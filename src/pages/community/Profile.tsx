@@ -4,7 +4,7 @@ import { User as UserIcon, Mail, Phone, Shield, Calendar, Edit, Check, X, Trash2
 import { format } from 'date-fns';
 import { supabase } from '../../api/supabaseClient';
 import { useToast } from '../../contexts/ToastContext';
-import type { Report } from '../../types/database';
+import type { Report } from '../../api/reports';
 
 type FormData = {
   full_name: string;

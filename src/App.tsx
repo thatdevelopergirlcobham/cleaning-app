@@ -17,10 +17,14 @@ import AIChatBot from './components/common/AIChatBot'
 // Community Pages
 import CommunityHome from './pages/community/CommunityHome'
 import CommunityHomeTest from './pages/community/CommunityHomeTest'
+import HomeTau from './pages/community/HomeTau'
 import ReportNew from './pages/community/ReportNew'
 import Events from './pages/community/Events'
 import AgentHire from './pages/community/AgentHire'
 import Profile from './pages/community/Profile'
+import WasteDetailPage from './pages/community/WasteDetailPage'
+import ReportDetailPage from './pages/community/ReportDetail'
+import HireCleaners from './pages/community/HireCleaners'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -56,15 +60,18 @@ function App() {
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/about" element={<About />} />
 
-                      {/* Authenticated User Routes */}
-                      <Route path="/home" element={<CommunityHome />} />
+                      
+                      <Route path="/home" element={<HomeTau />} />
 
                       {/* Community Routes */}
                       <Route path="/community" element={<CommunityHome />} />
                       <Route path="/community-test" element={<CommunityHomeTest />} />
                       <Route path="/report" element={<ReportNew />} />
+                      <Route path="/waste-detail/:id" element={<WasteDetailPage />} />
+                      <Route path="/reports/:id" element={<ReportDetailPage />} />
                       <Route path="/events" element={<Events />} />
                       <Route path="/agents" element={<AgentHire />} />
+                      <Route path="/hire-cleaners" element={<HireCleaners />} />
                       <Route
                         path="/profile"
                         element={

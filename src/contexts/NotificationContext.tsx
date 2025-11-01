@@ -1,8 +1,19 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { notificationsApi } from '../api/notifications';
 import type { Notification } from '../api/notifications';
-import NotificationContext from './NotificationContext';
+
+export interface NotificationContextType {
+  notifications: Notification[];
+  unreadCount: number;
+  loading: boolean;
+  markAsRead: (notificationId: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  fetchNotifications: () => Promise<void>;
+}
+
+const NotificationContext = createContext<NotificationContextType | null>(null);
 
 interface NotificationProviderProps {
   children: React.ReactNode;
@@ -112,3 +123,11 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
 }
 
 export default NotificationProvider;
+
+export const useNotifications = (): NotificationContextType => {
+  const ctx = useContext(NotificationContext);
+  if (!ctx) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return ctx;
+}

@@ -206,7 +206,7 @@ const AnalyticsDashboard: React.FC = () => {
       )
 
       const topReporters = reporterCounts
-        .map(([userId, data]: [string, Reporter]) => ({ user_id: userId, ...data }))
+        .map(([userId, data]: [string, Reporter]) => ({ ...data }))
         .sort((a, b) => b.report_count - a.report_count)
         .slice(0, 10)
 

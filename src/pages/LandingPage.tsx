@@ -9,7 +9,7 @@ import AboutSection from '../components/AboutSection'
 import ServicesSection from '../components/ServicesSection'
 import WhyChooseUsSection from '../components/WhyChooseUsSection'
 import TestimonialsSection from '../components/TestimonialsSection'
-import BlogSection from '../components/BlogSection'
+// import BlogSection from '../components/BlogSection'
 
 // interface NumberCounterProps {
 //   end: number
@@ -82,7 +82,6 @@ const LandingPage: React.FC = () => {
     <ServicesSection/>
     <WhyChooseUsSection/>
     <TestimonialsSection/>
-    <BlogSection/>
       <CallToActionSection />
       <Footer />
     </div>

@@ -13,6 +13,7 @@ interface User {
 }
 
 export interface ReportWithProfile extends Report {
+  is_anonymous: any
   user: User
   user_profiles: {
     full_name: string
@@ -34,6 +35,27 @@ export const getReports = async (): Promise<ReportWithProfile[]> => {
 
   if (error) throw error
   return data || []
+}
+
+export const getReportById = async (id: string): Promise<ReportWithProfile | null> => {
+  const { data, error } = await supabase
+    .from('reports')
+    .select(`
+      *,
+      user_profiles (
+        full_name,
+        avatar_url
+      )
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    if ((error as any).code === 'PGRST116') return null; // not found
+    throw error;
+  }
+
+  return data || null;
 }
 
 export const createReport = async (report: ReportInsert): Promise<Report> => {

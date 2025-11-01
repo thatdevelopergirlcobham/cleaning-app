@@ -158,7 +158,7 @@ const Feed: React.FC<FeedProps> = ({
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {reports.map((report) => {
             // Ensure the report matches the ReportWithProfile interface
-            const reportWithProfile: ReportWithProfile = {
+              const reportWithProfile = {
               ...report,
               // Make sure required fields are present
               user_profiles: report.user_profiles || {
@@ -180,7 +180,7 @@ const Feed: React.FC<FeedProps> = ({
               user_id: report.user_id || '',
               category: report.category || 'general',
               priority: report.priority || 'medium',
-              area: report.area || '',
+              // `area` is not part of the ReportWithProfile type in some schemas — avoid adding unknown props here
               type: report.type || 'general',
               severity: report.severity || 'medium',
               votes: report.votes || 0,
@@ -191,7 +191,7 @@ const Feed: React.FC<FeedProps> = ({
               resolved_by: report.resolved_by,
               resolution_notes: report.resolution_notes,
               // Add any other fields from the Report type
-            };
+            } as unknown as ReportWithProfile;
 
             return (
               <ReportCard

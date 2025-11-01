@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Report List (Supabase REST)</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f8fafc; color:#222; margin:0; padding:0 }
+    .container { max-width:900px; margin:32px auto; padding:24px; background:#fff; border-radius:10px; box-shadow:0 2px 12px #e5e7eb }
+    h1 { font-size:22px; margin-bottom:18px }
+    .controls { margin-bottom:18px; }
+    label { font-weight:600; margin-right:8px }
+    input[type=text] { padding:7px; border:1px solid #d1d5db; border-radius:4px; margin-right:8px }
+    button { padding:8px 14px; background:#0d6efd; color:white; border:0; border-radius:4px; cursor:pointer }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; }
+    .card { background:#f1f5f9; border-radius:8px; box-shadow:0 1px 4px #e5e7eb; padding:16px; display:flex; flex-direction:column; }
+    .card img { max-width:100%; height:auto; border-radius:6px; margin-bottom:10px; border:1px solid #e5e7eb }
+    .card .title { font-size:18px; font-weight:700; margin-bottom:6px }
+    .card .desc { font-size:15px; margin-bottom:8px; color:#374151 }
+    .card .meta { font-size:13px; color:#64748b; margin-bottom:4px }
+    .card .status { font-size:13px; color:#0d9488; font-weight:600; margin-bottom:4px }
+    .error { color:#b91c1c; margin-top:12px }
+    .loading { color:#0d6efd; margin-top:12px }
+    .empty { color:#64748b; margin-top:18px; font-size:16px }
+    @media (max-width:600px) { .container { padding:8px } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Report List (Supabase REST)</h1>
+    <div class="controls">
+      <label>Supabase URL</label>
+      <input type="text" id="sbUrl" value="https://hajgpcqbfougojrpaprr.supabase.co" />
+      <label>Anon Key</label>
+      <input type="text" id="sbKey" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY" />
+      <button id="fetchBtn">Fetch Reports</button>
+    </div>
+    <div id="status"></div>
+    <div class="cards" id="cards"></div>
+  </div>
+<script>
+const fetchBtn = document.getElementById('fetchBtn');
+const sbUrlInput = document.getElementById('sbUrl');
+const sbKeyInput = document.getElementById('sbKey');
+const status = document.getElementById('status');
+const cards = document.getElementById('cards');
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function fetchReports() {
+  status.textContent = '';
+  cards.innerHTML = '';
+  const sbUrl = sbUrlInput.value.trim();
+  const sbKey = sbKeyInput.value.trim();
+  if (!sbUrl || !sbKey) {
+    status.innerHTML = '<span class="error">Please enter Supabase URL and Anon Key.</span>';
+    return;
+  }
+  status.innerHTML = '<span class="loading">Loading reports...</span>';
+  try {
+    const res = await fetch(sbUrl + '/rest/v1/reports?select=*', {
+      headers: {
+        apikey: sbKey,
+        Authorization: 'Bearer ' + sbKey
+      }
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error('Fetch failed: ' + res.status + ' ' + text);
+    }
+    const reports = await res.json();
+    if (!Array.isArray(reports) || reports.length === 0) {
+      status.innerHTML = '<span class="empty">No reports found.</span>';
+      return;
+    }
+    status.textContent = '';
+    cards.innerHTML = reports.map(r => `
+      <div class="card">
+        ${r.image_url ? `<img src="${escapeHtml(r.image_url)}" alt="Report image">` : ''}
+        <div class="title">${escapeHtml(r.title)}</div>
+        <div class="desc">${escapeHtml(r.description)}</div>
+  <div class="meta">Location: ${escapeHtml(r.location || '')}</div>
+  <div class="meta">User: ${escapeHtml(r.user_id || '')}</div>
+        <div class="status">Status: ${escapeHtml(r.status || '')}</div>
+        <div class="meta">Created: ${escapeHtml(r.created_at || '')}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    status.innerHTML = '<span class="error">' + (err.message || err) + '</span>';
+    console.error(err);
+  }
+}
+
+fetchBtn.addEventListener('click', fetchReports);
+// Optionally auto-fetch on load
+// fetchReports();
+</script>
+</body>
+</html>

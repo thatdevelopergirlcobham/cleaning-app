@@ -77,17 +77,27 @@ const CommunityHome: React.FC = () => {
         
         const { data, error: fetchError } = await supabase
           .from('reports')
-          .select('*')
+          .select(`
+            *,
+            user_profiles (
+              full_name,
+              avatar_url
+            )
+          `)
           .order('created_at', { ascending: false })
           .limit(50);
         
-        console.log('Query completed. Data:', data, 'Error:', fetchError);
+        console.log('Query completed.');
+        console.log('Data received:', data ? `${data.length} reports` : 'No data');
+        console.log('Full data:', data);
 
         if (fetchError) {
-          console.error('Supabase fetch error:', fetchError);
-          console.error('Error code:', fetchError.code);
-          console.error('Error message:', fetchError.message);
-          console.error('Error details:', fetchError.details);
+          console.error('Error details:', {
+            code: fetchError.code,
+            message: fetchError.message,
+            details: fetchError.details,
+            hint: fetchError.hint
+          });
           
           // If it's an RLS error, show helpful message
           if (fetchError.message?.includes('row-level security') || fetchError.code === '42501') {
@@ -115,9 +125,7 @@ const CommunityHome: React.FC = () => {
           isLoadingRef = false;
         }
       }
-    };
-
-    fetchReports();
+    };    fetchReports();
 
     return () => {
       if (timeoutId) {
@@ -136,15 +144,32 @@ const CommunityHome: React.FC = () => {
           schema: 'public',
           table: 'reports'
         } as const, 
-        (payload) => {
+        async (payload) => {
           if (!isMounted.current) return;
 
-          if (payload.eventType === 'INSERT') {
-            setReports(prev => [payload.new as unknown as Report, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            setReports(prev => 
-              prev.map(r => r.id === payload.new.id ? (payload.new as unknown as Report) : r)
-            );
+          // For inserts and updates, fetch the complete report with user profile
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const { data: fullReport } = await supabase
+              .from('reports')
+              .select(`
+                *,
+                user_profiles (
+                  full_name,
+                  avatar_url
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (fullReport) {
+              if (payload.eventType === 'INSERT') {
+                setReports(prev => [fullReport as unknown as Report, ...prev]);
+              } else {
+                setReports(prev => 
+                  prev.map(r => r.id === fullReport.id ? (fullReport as unknown as Report) : r)
+                );
+              }
+            }
           } else if (payload.eventType === 'DELETE') {
             setReports(prev => prev.filter(r => r.id !== payload.old.id));
           }

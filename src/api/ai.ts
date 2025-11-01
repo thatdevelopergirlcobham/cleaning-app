@@ -324,8 +324,9 @@ class AIApiService {
 
   // 7. Analyze KPI data
   async analyzeKPIs(kpiData: EcoBotRequest['kpiData']): Promise<AIInsight> {
+    // If no API key is present, return a mock KPI analysis to keep dev flow smooth.
     if (!GEMINI_API_KEY) {
-      throw new Error('AI service not configured. Please add your API key.');
+      return this.getMockKPIAnalysis(kpiData);
     }
 
     try {
@@ -460,6 +461,23 @@ class AIApiService {
       content: `Your platform shows ${_kpiData?.totalReports || 0} total reports with a ${((_kpiData?.resolvedReports || 0) / (_kpiData?.totalReports || 1) * 100).toFixed(1)}% resolution rate. Consider increasing agent availability during peak hours.`,
       confidence: 0.82
     };
+  }
+
+  // Mock insights for reports used in dev when API key is absent
+  private getMockReportInsights(_reportData?: EcoBotRequest['reportData']): AIInsight[] {
+    const title = _reportData?.title ? `${_reportData.title} — ` : '';
+    return [
+      {
+        type: 'eco_tip',
+        content: `${title}This area likely contains mixed waste. Recommend sorting plastics and organics separately and flagging hazardous materials for specialist collection.`,
+        confidence: 0.75
+      },
+      {
+        type: 'contextual_insight',
+        content: 'Consider placing informational signage about proper disposal near the site and schedule a community cleanup to engage local residents.',
+        confidence: 0.6
+      }
+    ];
   }
 
   private parseCategoryResponse(data: Record<string, unknown>): string | null {

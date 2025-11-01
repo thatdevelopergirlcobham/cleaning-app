@@ -22,10 +22,40 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
-// Database Types (to be extended based on your Supabase schema)
+// Database Types
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+
 export type Database = {
   public: {
     Tables: {
+      report_comments: {
+        Row: {
+          id: string
+          report_id: string
+          user_id: string | null
+          content: string
+          is_anonymous: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          user_id?: string | null
+          content: string
+          is_anonymous?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          report_id?: string
+          user_id?: string | null
+          content?: string
+          is_anonymous?: boolean
+          updated_at?: string
+        }
+      },
       reports: {
         Row: {
           id: string

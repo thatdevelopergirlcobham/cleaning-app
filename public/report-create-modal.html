@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Report Create (Modal-like Test)</title>
+  <style>
+    body { font-family: Inter, Arial, sans-serif; padding:20px; background:#fff; color:#111 }
+    .container { max-width:760px; margin:0 auto }
+    h1 { font-size:20px; margin-bottom:12px }
+    label { display:block; margin-top:10px; font-weight:600 }
+    input[type=text], textarea, input[type=file], select { width:100%; padding:8px; margin-top:6px; box-sizing:border-box }
+    button { margin-top:12px; padding:10px 14px; background:#0d542b; color:white; border:0; border-radius:6px; cursor:pointer }
+    .status { margin-top:12px; padding:10px; background:#f8fafc; border-radius:6px }
+    .error { color:#b91c1c }
+    .success { color:#065f46 }
+    .preview { margin-top:12px }
+    img.preview-img { max-width:160px; height:120px; object-fit:cover; border:1px solid #e5e7eb; padding:6px; border-radius:6px }
+    .small { font-size:13px; color:#374151 }
+    pre { white-space:pre-wrap; word-break:break-word; background:#0f172a; color:#e6fffa; padding:8px; border-radius:6px }
+    .controls { display:flex; gap:8px; align-items:center }
+    .muted { color:#6b7280 }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Report Create — Modal-like Test</h1>
+    <p class="small">This test page mirrors the logic in <code>ReportModal</code>. It uploads the image first, shows an immediate preview, then submits the report to Supabase REST API. Use the default Supabase ANON key or replace with your own.</p>
+
+    <form id="reportForm">
+      <label>Title</label>
+      <input type="text" id="title" required />
+
+      <label>Description</label>
+      <textarea id="description" rows="4" required></textarea>
+
+      <label>Location (address or lat,lng)</label>
+      <input type="text" id="location" placeholder="Address or 'lat,lng'" />
+
+      <label>Latitude (optional)</label>
+      <input type="text" id="latitude" placeholder="4.95" />
+
+      <label>Longitude (optional)</label>
+      <input type="text" id="longitude" placeholder="8.34" />
+
+      <label>Category</label>
+      <select id="category">
+        <option value="other">Other</option>
+        <option value="illegal_dumping">Illegal Dumping</option>
+        <option value="overflowing_bin">Overflowing Bin</option>
+      </select>
+
+      <label>Priority</label>
+      <select id="priority">
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+      </select>
+
+      <label>Image (required)</label>
+      <input type="file" id="image" accept="image/*" required />
+
+      <label>User ID (optional)</label>
+      <input type="text" id="userId" placeholder="Paste a user UUID to test authenticated insert (optional)" />
+
+      <div class="controls">
+        <button type="submit" id="submitBtn">Submit</button>
+        <button type="button" id="clearBtn" style="background:#ef4444">Clear</button>
+        <div id="uploadingTag" class="muted" style="margin-left:8px"></div>
+      </div>
+    </form>
+
+    <div id="status" class="status" aria-live="polite"></div>
+
+    <div id="preview" class="preview"></div>
+
+    <div id="saved" style="display:none; margin-top:12px">
+      <h3>Saved Report</h3>
+      <div id="savedContent"></div>
+    </div>
+
+    <h4 style="margin-top:18px">Debug console output</h4>
+    <pre id="debug" style="height:200px; overflow:auto"></pre>
+  </div>
+
+<script>
+  const CLOUDINARY_ENDPOINT = 'https://clean-cal-api.vercel.app/upload';
+
+  const form = document.getElementById('reportForm');
+  const status = document.getElementById('status');
+  const preview = document.getElementById('preview');
+  const saved = document.getElementById('saved');
+  const savedContent = document.getElementById('savedContent');
+  const debugEl = document.getElementById('debug');
+  const uploadingTag = document.getElementById('uploadingTag');
+  const submitBtn = document.getElementById('submitBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  // Default Supabase details (same as HomeTau). Replace if needed.
+  const DEFAULT_SUPABASE_URL = 'https://hajgpcqbfougojrpaprr.supabase.co';
+  const DEFAULT_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY';
+
+  let isUploading = false;
+  let isSubmitting = false;
+  let imageUrl = '';
+  let previewUrl = '';
+  let fileInput = document.getElementById('image');
+
+  function logDebug(...args) {
+    console.log(...args);
+    debugEl.textContent += args.map(a => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a))).join(' ') + '\n';
+    debugEl.scrollTop = debugEl.scrollHeight;
+  }
+
+  function setStatus(text, type) {
+    status.innerHTML = text ? `<span class="${type || ''}">${text}</span>` : '';
+  }
+
+  async function uploadImage(file) {
+    if (!file) return null;
+    isUploading = true;
+    uploadingTag.textContent = 'Uploading...';
+    submitBtn.disabled = true;
+    try {
+      // create preview
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      preview.innerHTML = `<img class="preview-img" src="${previewUrl}" alt="preview">`;
+
+      logDebug('Uploading file to proxy endpoint...');
+      const fd = new FormData();
+      // Use 'image' key as in ReportModal
+      fd.append('image', file, file.name);
+
+      const res = await fetch(CLOUDINARY_ENDPOINT, {
+        method: 'POST',
+        body: fd
+      });
+      const text = await res.text();
+      logDebug('Upload raw response:', res.status, text);
+      if (!res.ok) {
+        throw new Error('Upload failed: ' + res.status + ' ' + text);
+      }
+      const json = JSON.parse(text || '{}');
+      // support different shapes
+      const url = json.url || json.secure_url || json.data?.url || json.data?.secure_url;
+      if (!url) throw new Error('No URL returned from upload');
+      imageUrl = url;
+      logDebug('Upload finished. URL:', imageUrl);
+      setStatus('Image uploaded successfully', 'success');
+      return url;
+    } catch (err) {
+      console.error(err);
+      logDebug('Upload error:', err.message || err);
+      setStatus('Image upload failed: ' + (err.message || err), 'error');
+      // clear preview
+      if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = ''; }
+      preview.innerHTML = '';
+      imageUrl = '';
+      return null;
+    } finally {
+      isUploading = false;
+      uploadingTag.textContent = '';
+      submitBtn.disabled = false;
+    }
+  }
+
+  // handle immediate upload on file select (like the modal)
+  fileInput.addEventListener('change', async function(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    logDebug('File selected:', f.name, f.type, f.size);
+    await uploadImage(f);
+  });
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (isUploading) { setStatus('Please wait for image to finish uploading', 'error'); return; }
+    if (!imageUrl) { setStatus('Please upload an image before submitting', 'error'); return; }
+
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const locationStr = document.getElementById('location').value.trim();
+    const latInput = document.getElementById('latitude').value.trim();
+    const lngInput = document.getElementById('longitude').value.trim();
+    const category = document.getElementById('category').value;
+    const priority = document.getElementById('priority').value;
+
+    if (!title || !description) { setStatus('Please fill title and description', 'error'); return; }
+
+    isSubmitting = true;
+    submitBtn.disabled = true;
+    setStatus('Submitting report...', '');
+    logDebug('Submitting report with image_url:', imageUrl);
+
+    try {
+      // build payload similar to modal logic: location may be object or string
+      let locationVal = null;
+      if (latInput && lngInput && !isNaN(Number(latInput)) && !isNaN(Number(lngInput))) {
+        locationVal = { lat: Number(latInput), lng: Number(lngInput) };
+      } else if (locationStr) {
+        // allow 'lat,lng' as well
+        const parts = locationStr.split(',').map(p => p.trim());
+        if (parts.length === 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1]))) {
+          locationVal = { lat: Number(parts[0]), lng: Number(parts[1]) };
+        } else {
+          locationVal = locationStr;
+        }
+      }
+
+      // Determine a user_id. If the tester provided one, use it. Otherwise generate a random UUID
+      // Note: If your Supabase RLS requires auth.uid() = user_id, using the ANON key will still fail.
+      let providedUserId = document.getElementById('userId')?.value.trim();
+      const generateUUID = () => {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+        // fallback to RFC4122 version 4 UUID
+        const bytes = crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+      };
+      const userId = providedUserId && providedUserId.length > 0 ? providedUserId : generateUUID();
+
+      const payload = {
+        title,
+        description,
+        image_url: imageUrl,
+        user_id: userId,
+        status: 'pending',
+        category: category || 'other',
+        priority: priority || 'medium',
+        location: locationVal
+      };
+
+      logDebug('Payload ->', payload);
+
+      const sbUrl = DEFAULT_SUPABASE_URL;
+      const sbKey = DEFAULT_SUPABASE_ANON;
+
+      const res = await fetch(sbUrl + '/rest/v1/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: sbKey,
+          Authorization: 'Bearer ' + sbKey,
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const text = await res.text();
+      logDebug('Supabase raw response:', res.status, text);
+      if (!res.ok) {
+        throw new Error('Supabase insert failed: ' + res.status + ' ' + text);
+      }
+      const created = JSON.parse(text || 'null');
+      const row = Array.isArray(created) ? created[0] : created;
+
+      setStatus('Report saved successfully', 'success');
+      saved.style.display = 'block';
+      savedContent.innerHTML = `
+        <p><strong>Title:</strong> ${escapeHtml(row.title || payload.title)}</p>
+        <p><strong>Description:</strong> ${escapeHtml(row.description || payload.description)}</p>
+        <p><strong>Location:</strong> ${escapeHtml(typeof row.location === 'object' ? JSON.stringify(row.location) : row.location || '')}</p>
+        <p><strong>User ID:</strong> ${escapeHtml(row.user_id || payload.user_id)}</p>
+        <p><strong>Status:</strong> ${escapeHtml(row.status || payload.status)}</p>
+        <p><strong>Created at:</strong> ${escapeHtml(row.created_at || '')}</p>
+        <div class="preview"><img class="preview-img" src="${escapeHtml(row.image_url || payload.image_url)}" alt="uploaded image"></div>
+        <pre>${JSON.stringify(row, null, 2)}</pre>
+      `;
+
+    } catch (err) {
+      console.error(err);
+      const msg = (err && err.message) ? err.message : String(err);
+      setStatus(msg, 'error');
+      logDebug('Submit error:', msg);
+    } finally {
+      isSubmitting = false;
+      submitBtn.disabled = false;
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    form.reset();
+    setStatus('', '');
+    preview.innerHTML = '';
+    saved.style.display = 'none';
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = ''; }
+    imageUrl = '';
+  });
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+</script>
+</body>
+</html>

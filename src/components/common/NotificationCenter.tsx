@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Bell, Trash2, Check } from 'lucide-react'
 import { useNotifications } from '../../contexts/NotificationContext'
+import type { Notification } from '../../api/notifications'
 import Modal from './Modal'
 
 interface NotificationCenterProps {
@@ -12,9 +13,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all')
 
-  const filteredNotifications = notifications.filter((notification) => {
+  const filteredNotifications = notifications.filter((notification: Notification) => {
     if (filter === 'unread') return !notification.read
-    if (filter === 'read') return notification.read
+    if (filter === 'read') return !!notification.read
     return true
   })
 
@@ -98,7 +99,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredNotifications.map((notification) => (
+              {filteredNotifications.map((notification: Notification) => (
                 <div
                   key={notification.id}
                   className={`p-4 border-l-4 rounded-r-lg ${getNotificationColor(notification.type)} ${

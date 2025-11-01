@@ -1,4 +1,5 @@
 import React from 'react'
+// import type { UserProfile } from '../../contexts/AuthContext.types';
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import LoadingSpinner from './LoadingSpinner'
@@ -17,8 +18,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
-  if (loading) {
-    return <LoadingSpinner />
+  // Shortened loading time for authentication check
+  const [showLoading, setShowLoading] = React.useState(loading);
+
+  React.useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowLoading(false);
+      }, 1000); // Show loader for max 1 second
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  if (loading && showLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (!user) {

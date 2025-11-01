@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Report Create (Test)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding:20px; background:#fff; color:#111 }
+    .container { max-width:800px; margin:0 auto }
+    h1 { font-size:20px; margin-bottom:12px }
+    label { display:block; margin-top:10px; font-weight:600 }
+    input[type=text], textarea, input[type=file] { width:100%; padding:8px; margin-top:6px; box-sizing:border-box }
+    button { margin-top:12px; padding:10px 14px; background:#0d6efd; color:white; border:0; border-radius:4px; cursor:pointer }
+    .status { margin-top:12px; padding:10px; background:#f1f5f9; border-radius:4px }
+    .error { color:#b91c1c }
+    .success { color:#065f46 }
+    .preview { margin-top:12px }
+    img.preview-img { max-width:100%; height:auto; border:1px solid #e5e7eb; padding:6px; border-radius:6px }
+    .saved { margin-top:18px; padding:12px; border:1px solid #e6e8eb; background:#fbfbfb }
+    pre { white-space:pre-wrap; word-break:break-word; background:#0f172a; color:#e6fffa; padding:8px; border-radius:6px }
+    .small { font-size:13px; color:#374151 }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Report Create (Simple Test)</h1>
+
+    <p class="small">This page uploads the chosen image to the Cloudinary proxy endpoint then inserts a report row into Supabase using the REST API. Fill the fields and click <strong>Submit</strong>.</p>
+
+    <form id="reportForm">
+      <label>Title</label>
+      <input type="text" id="title" required />
+
+      <label>Description</label>
+      <textarea id="description" rows="4" required></textarea>
+
+      <label>Location (address or lat,lng)</label>
+      <input type="text" id="location" placeholder="e.g. 6.5244,3.3792 or 'Ikeja, Lagos'" />
+
+      <label>Image (required)</label>
+      <input type="file" id="image" accept="image/*" required />
+
+      <label>User ID (optional)</label>
+      <input type="text" id="userId" placeholder="test-user-id (optional)" />
+
+      <label>Supabase URL</label>
+      <input type="text" id="sbUrl" value="https://hajgpcqbfougojrpaprr.supabase.co" />
+
+      <label>Supabase ANON key</label>
+      <input type="text" id="sbKey" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY" />
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="submit">Submit</button>
+        <button type="button" id="clearBtn">Clear</button>
+      </div>
+    </form>
+
+    <div id="status" class="status" aria-live="polite"></div>
+
+    <div id="preview" class="preview"></div>
+
+    <div id="saved" class="saved" style="display:none">
+      <h3>Saved Report</h3>
+      <div id="savedContent"></div>
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById('reportForm');
+  const status = document.getElementById('status');
+  const preview = document.getElementById('preview');
+  const savedEl = document.getElementById('saved');
+  const savedContent = document.getElementById('savedContent');
+  const clearBtn = document.getElementById('clearBtn');
+
+  const CLOUDINARY_ENDPOINT = 'https://clean-cal-api.vercel.app/upload';
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = '';
+    savedEl.style.display = 'none';
+    savedContent.innerHTML = '';
+
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const location = document.getElementById('location').value.trim();
+    const userId = document.getElementById('userId').value.trim() || 'public-test';
+    const sbUrl = document.getElementById('sbUrl').value.trim();
+    const sbKey = document.getElementById('sbKey').value.trim();
+
+    const fileInput = document.getElementById('image');
+    const file = fileInput.files[0];
+    if (!file) {
+      status.innerHTML = '<span class="error">Please select an image.</span>';
+      return;
+    }
+
+    try {
+      status.innerHTML = 'Uploading image to Cloudinary...';
+
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const upRes = await fetch(CLOUDINARY_ENDPOINT, { method: 'POST', body: fd });
+      if (!upRes.ok) {
+        const text = await upRes.text();
+        throw new Error('Upload failed: ' + upRes.status + ' ' + text);
+      }
+      const upJson = await upRes.json();
+      const imageUrl = upJson.url || upJson.secure_url || upJson.data?.url;
+      if (!imageUrl) throw new Error('No URL returned from upload');
+
+      status.innerHTML = 'Image uploaded. Saving report to Supabase...';
+
+      // Build payload. We send location as string for simplicity.
+      const payload = {
+        title,
+        description,
+        location: location || '',
+        image_url: imageUrl,
+        user_id: userId,
+        status: 'pending'
+      };
+
+      const res = await fetch(sbUrl + '/rest/v1/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: sbKey,
+          Authorization: 'Bearer ' + sbKey,
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error('Supabase insert failed: ' + res.status + ' ' + text);
+      }
+
+      const created = await res.json();
+      // created is an array of inserted rows
+      const row = Array.isArray(created) ? created[0] : created;
+
+      status.innerHTML = '<span class="success">Report saved successfully.</span>';
+
+      // Show saved content
+      savedEl.style.display = 'block';
+      savedContent.innerHTML = `
+        <p><strong>Title:</strong> ${escapeHtml(row.title || payload.title)}</p>
+        <p><strong>Description:</strong> ${escapeHtml(row.description || payload.description)}</p>
+        <p><strong>Location:</strong> ${escapeHtml(row.location || payload.location)}</p>
+  <p><strong>User ID:</strong> ${escapeHtml(row.user_id || payload.user_id)}</p>
+        <p><strong>Status:</strong> ${escapeHtml(row.status || payload.status)}</p>
+        <p><strong>Created at:</strong> ${escapeHtml(row.created_at || '')}</p>
+        <div class="preview"><img class="preview-img" src="${escapeHtml(row.image_url || payload.image_url)}" alt="uploaded image"></div>
+        <pre>${JSON.stringify(row, null, 2)}</pre>
+      `;
+
+    } catch (err) {
+      status.innerHTML = '<span class="error">' + (err.message || err) + '</span>';
+      console.error(err);
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    form.reset();
+    status.textContent = '';
+    preview.innerHTML = '';
+    savedEl.style.display = 'none';
+  });
+
+  // preview image when selected
+  document.getElementById('image').addEventListener('change', function(e) {
+    const f = e.target.files[0];
+    if (!f) { preview.innerHTML = ''; return; }
+    const url = URL.createObjectURL(f);
+    preview.innerHTML = '<img class="preview-img" src="' + url + '" alt="preview">';
+  });
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+</script>
+</body>
+</html>

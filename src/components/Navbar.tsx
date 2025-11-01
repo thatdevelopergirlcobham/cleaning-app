@@ -12,11 +12,13 @@ const Navbar: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      await signOut();
+      const { error } = await signOut();
+      if (error) throw error;
       setIsDropdownOpen(false);
-      navigate('/');
+      navigate('/auth');
     } catch (error) {
-      console.error('Failed to sign out', error);
+      console.error('Failed to sign out:', error);
+      alert('Failed to sign out. Please try again.');
     }
   };
 

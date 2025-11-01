@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useUI } from '../../contexts/UIContext'
-import { useNotifications } from '../../contexts/NotificationContext'
+import { useNotifications } from '../../hooks/useNotifications'
 import { Menu, X, User, LogOut, Settings, Bell } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
 
@@ -47,6 +47,30 @@ const Navbar: React.FC = () => {
                 }`}
               >
                 Events
+              </Link>
+              <Link
+                to="/hire-cleaners"
+                className={`font-medium transition-colors ${
+                  isActive('/hire-cleaners') ? 'text-primary' : ' text-white hover:text-primary'
+                }`}
+              >
+                Hire Cleaners
+              </Link>
+              <Link
+                to="/map"
+                className={`font-medium transition-colors ${
+                  isActive('/map') ? 'text-primary' : ' text-white hover:text-primary'
+                }`}
+              >
+                Map
+              </Link>
+              <Link
+                to="/upscale"
+                className={`font-medium transition-colors ${
+                  isActive('/upscale') ? 'text-primary' : ' text-white hover:text-primary'
+                }`}
+              >
+                Upscale
               </Link>
               <Link
                 to="/about"
@@ -153,6 +177,33 @@ const Navbar: React.FC = () => {
               onClick={toggleMobileMenu}
             >
               Events
+            </Link>
+            <Link
+              to="/hire-cleaners"
+              className={`block font-medium transition-colors ${
+                isActive('/hire-cleaners') ? 'text-primary' : 'text-gray-600 hover:text-primary'
+              }`}
+              onClick={toggleMobileMenu}
+            >
+              Hire Cleaners
+            </Link>
+            <Link
+              to="/map"
+              className={`block font-medium transition-colors ${
+                isActive('/map') ? 'text-primary' : 'text-gray-600 hover:text-primary'
+              }`}
+              onClick={toggleMobileMenu}
+            >
+              Map
+            </Link>
+            <Link
+              to="/upscale"
+              className={`block font-medium transition-colors ${
+                isActive('/upscale') ? 'text-primary' : 'text-gray-600 hover:text-primary'
+              }`}
+              onClick={toggleMobileMenu}
+            >
+              Upscale
             </Link>
             <Link
               to="/about"
