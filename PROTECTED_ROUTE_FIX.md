@@ -43,7 +43,7 @@ const { user, profile } = useAuth()
 Just like the Navbar:
 
 ```tsx
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 
 const MyPage = () => {
   const { user } = useAuth()

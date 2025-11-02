@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { User as UserIcon, Mail, Phone, Shield, Calendar, Edit, Check, X, Trash2, FileText, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../../api/supabaseClient';

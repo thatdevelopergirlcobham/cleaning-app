@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 import { useUI } from '../../contexts/UIContext'
 import { useNotifications } from '../../hooks/useNotifications'
 import { Menu, X, User, LogOut, Settings, Bell } from 'lucide-react'

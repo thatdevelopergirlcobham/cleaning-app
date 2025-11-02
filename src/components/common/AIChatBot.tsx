@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react'
 import { useAI } from '../../contexts'
-// import { useAuth } from '../../contexts/AuthContext'
+// import { useAuth } from '../../hooks/useAuth'
 
 interface Message {
   id: string
