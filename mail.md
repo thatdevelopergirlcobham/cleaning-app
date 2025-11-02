@@ -2,7 +2,7 @@ Subject: Status update — Clean Calabar (apologies for delay)
 
 Hi Prince,
 
-I’m sorry for the late deliverable — I want to give a clear status update on the Clean Calabar project, what is implemented, the issues we encountered, what I fixed so far, and recommended next steps.
+I’m sorry for the late deliverable — I want to give a clear status update on the Clean Calabar project,` what is implemented, the issues we encountered, what I fixed so far, and recommended next steps.
 
 Live demo: https://clean-calabar.netlify.app
 

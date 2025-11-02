@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Report Detail Test</title>
+    <style>
+      body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; padding: 24px; background:#f7fafc }
+      .card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); max-width:900px }
+      label { display:block; margin-top:8px; font-weight:600 }
+      input[type=text], textarea { width:100%; padding:8px; margin-top:6px; border:1px solid #e5e7eb; border-radius:6px }
+      button { margin-top:12px; padding:8px 12px; background:#16a34a; color:white; border:none; border-radius:6px }
+      img.preview { max-width:100%; height:auto; border-radius:6px; margin-top:8px }
+      pre { background:#111827; color:#d1d5db; padding:12px; border-radius:6px; overflow:auto }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Report Detail Tester</h2>
+      <p>Paste your Supabase <strong>URL</strong> and <strong>ANON public API key</strong> below, then enter a report id to fetch. This page calls the PostgREST endpoint and displays the first matching report (including related user_profiles).</p>
+
+      <label for="url">Supabase URL</label>
+      <input id="url" type="text" placeholder="https://your-project-id.supabase.co" />
+
+      <label for="key">Supabase ANON Key</label>
+      <input id="key" type="text" placeholder="public-anon-key" />
+
+      <label for="reportId">Report ID</label>
+      <input id="reportId" type="text" placeholder="report-uuid" />
+
+      <button id="fetch">Fetch Report</button>
+
+      <div id="output" style="margin-top:18px"></div>
+    </div>
+
+    <script>
+      const el = id => document.getElementById(id)
+      const out = el('output')
+      el('fetch').addEventListener('click', async () => {
+        out.innerHTML = '<p>Loading…</p>'
+        const url = el('url').value.trim()
+        const key = el('key').value.trim()
+        const id = el('reportId').value.trim()
+        if (!url || !key || !id) {
+          out.innerHTML = '<p style="color:darkred">Please provide Supabase URL, ANON key and report id.</p>'
+          return
+        }
+
+        try {
+          const endpoint = `${url.replace(/\/$/, '')}/rest/v1/reports?id=eq.${encodeURIComponent(id)}&select=*,user_profiles(full_name,avatar_url)`
+          const res = await fetch(endpoint, {
+            headers: {
+              'apikey': key,
+              'Authorization': 'Bearer ' + key,
+              'Accept': 'application/json'
+            }
+          })
+
+          if (!res.ok) {
+            const txt = await res.text()
+            out.innerHTML = `<pre>HTTP ${res.status} ${res.statusText}\n\n${txt}</pre>`
+            return
+          }
+
+          const data = await res.json()
+          if (!Array.isArray(data) || data.length === 0) {
+            out.innerHTML = '<p>No report found for that id.</p>'
+            return
+          }
+
+          const r = data[0]
+          // render a simple detail view
+          out.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr;gap:12px">
+              <div>
+                <h3 style="margin:0">${escapeHtml(r.title || '(no title)')}</h3>
+                <div style="color:#6b7280;margin-top:4px">By: ${escapeHtml((r.user_profiles && r.user_profiles.full_name) || (r.is_anonymous? 'Anonymous' : 'Community member'))}</div>
+              </div>
+              <div>
+                ${r.image_url ? `<img class="preview" src="${escapeHtml(r.image_url)}" alt="${escapeHtml(r.title || '')}" />` : ''}
+              </div>
+              <div style="background:#f3f4f6;padding:12px;border-radius:6px">${escapeHtml(r.description || '')}</div>
+              <div style="color:#374151">Status: <strong>${escapeHtml(r.status || 'unknown')}</strong></div>
+              <div style="color:#374151">Created: <strong>${escapeHtml(r.created_at || '')}</strong></div>
+              <div>
+                <h4 style="margin:6px 0">Raw JSON</h4>
+                <pre>${escapeHtml(JSON.stringify(r, null, 2))}</pre>
+              </div>
+            </div>
+          `
+        } catch (err) {
+          out.innerHTML = `<pre>${String(err)}</pre>`
+        }
+      })
+
+      function escapeHtml(s) {
+        if (s === null || s === undefined) return ''
+        return String(s)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;')
+      }
+    </script>
+  </body>
+</html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Report Detail Debug</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; }
+    .card { border: 1px solid #e5e7eb; padding: 16px; border-radius: 8px; max-width: 800px; }
+    img { max-width: 100%; height: auto; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Report Detail Debug</h1>
+  <p>Provide <code>?id=&lt;report-id&gt;</code> in the URL. You must set your Supabase URL/ANON_KEY below to fetch a real report.</p>
+
+  <div class="card" id="result">
+    <div id="status">Waiting for id...</div>
+  </div>
+
+  <script>
+    // WARNING: Only use this in dev. Put your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY here
+    const SUPABASE_URL = 'REPLACE_WITH_YOUR_SUPABASE_URL';
+    const SUPABASE_KEY = 'REPLACE_WITH_YOUR_ANON_KEY';
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    const resultEl = document.getElementById('result');
+    const statusEl = document.getElementById('status');
+
+    if (!id) {
+      statusEl.textContent = 'No id provided in query string.';
+    } else if (SUPABASE_URL.includes('REPLACE')) {
+      statusEl.innerHTML = '<strong>Missing Supabase credentials</strong>. Open this file and paste your project URL & anon key in the script variables.';
+    } else {
+      statusEl.textContent = 'Fetching report...';
+      (async () => {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${id}`, {
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${SUPABASE_KEY}`,
+              Accept: 'application/json'
+            }
+          });
+          if (!res.ok) throw new Error('Fetch error ' + res.status);
+          const data = await res.json();
+          if (!data || data.length === 0) {
+            statusEl.textContent = 'Report not found';
+            return;
+          }
+          const r = data[0];
+          statusEl.style.display = 'none';
+          resultEl.innerHTML = `
+            <h2>${r.title}</h2>
+            <p><strong>Status:</strong> ${r.status}</p>
+            ${r.image_url ? `<img src="${r.image_url}" alt="${r.title}"/>` : ''}
+            <h3>Description</h3>
+            <p>${r.description}</p>
+            <pre style="background:#f7f7f7;padding:8px;border-radius:4px">${JSON.stringify(r, null, 2)}</pre>
+          `;
+        } catch (err) {
+          statusEl.textContent = 'Error fetching report: ' + err.message;
+        }
+      })();
+    }
+  </script>
+</body>
+</html>

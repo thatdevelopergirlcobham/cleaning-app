@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo, useContext } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo,  } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { notificationsApi } from '../api/notifications';
 import type { Notification } from '../api/notifications';
@@ -122,13 +122,13 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
   )
 }
 
-export const useNotifications = (): NotificationContextType => {
-  const ctx = useContext(NotificationContext);
-  if (!ctx) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
-  }
-  return ctx;
-};
+// export const useNotifications = (): NotificationContextType => {
+//   const ctx = useContext(NotificationContext);
+//   if (!ctx) {
+//     throw new Error('useNotifications must be used within a NotificationProvider');
+//   }
+//   return ctx;
+// };
 
 export { NotificationProvider };
 export default NotificationProvider;

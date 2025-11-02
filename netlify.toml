@@ -1,0 +1,32 @@
+# Netlify configuration for Clean Calabar (single-page app built with Vite)
+# - Provides SPA fallback so client-side routes return index.html
+# - Sets Netlify build command and publish directory to Vite defaults
+
+[build]
+  # The command Netlify should run to build your app
+  command = "npm run build"
+
+  # Vite outputs to `dist` by default
+  publish = "dist"
+
+[[redirects]]
+  # SPA fallback: serve index.html for all routes so client-side routing works
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  # Convenience redirect: if someone visits /admin directly, send them to the
+  # admin login route handled by the client app. This is a temporary convenience
+  # and can be removed if you prefer the SPA fallback to handle it.
+  from = "/admin"
+  to = "/admin/login"
+  status = 302
+  force = false
+
+# Add any additional redirects below. Example:
+# [[redirects]]
+#   from = "/old-path"
+#   to = "/new-path"
+#   status = 301

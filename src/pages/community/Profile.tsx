@@ -63,6 +63,49 @@ const Profile: React.FC = () => {
     }
   }, [user, fetchUserReports]);
 
+  // Realtime subscription to keep the user's report list in sync
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`user-reports-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reports', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          try {
+            const ev = payload.eventType as string;
+            const newRow = payload.new as Report;
+            const oldRow = payload.old as Report | null;
+
+            if (ev === 'INSERT') {
+              setUserReports(prev => [newRow, ...prev]);
+            } else if (ev === 'UPDATE') {
+              setUserReports(prev => prev.map(r => (r.id === newRow.id ? newRow : r)));
+            } else if (ev === 'DELETE') {
+              const idToRemove = oldRow?.id ?? newRow?.id;
+              if (idToRemove) setUserReports(prev => prev.filter(r => r.id !== idToRemove));
+            }
+          } catch (err) {
+            console.warn('Realtime handler error', err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        channel.unsubscribe();
+        const maybe = supabase as unknown as { removeChannel?: (c: unknown) => void };
+        if (typeof maybe.removeChannel === 'function') {
+          maybe.removeChannel(channel);
+        }
+      } catch {
+        // ignore
+      }
+    };
+  }, [user]);
+
   const handleDeleteReport = async (reportId: string) => {
     if (!confirm('Are you sure you want to delete this report?')) return;
     

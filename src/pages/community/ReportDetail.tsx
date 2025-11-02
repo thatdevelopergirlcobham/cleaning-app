@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, } from 'react-router-dom';
-import { supabase } from '../../api/supabaseClient';
-import { getReportById, type ReportWithProfile } from '../../api/reports';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '../../api/supabaseClient'; // We use this directly now
+// We no longer need getReportById, but we still need the type
+import { type ReportWithProfile } from '../../api/reports'; 
 import { reverseGeocode } from '../../utils/geocoding';
 import { format } from 'date-fns';
 import { MapIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../hooks/useAuth';
 import { useComments } from '../../hooks/useComments';
-
 
 type ReportRow = ReportWithProfile | null;
 
@@ -15,8 +15,6 @@ interface LocationData {
   lat: number;
   lng: number;
 }
-
-
 
 const formatDate = (d?: string) => {
   if (!d) return '';
@@ -37,6 +35,8 @@ const ReportDetailPage: React.FC = () => {
   const { user } = useAuth();
 
   // Comments state
+  // This is now redundant because ReportWithProfile includes user_profiles
+  // but we can keep it for the fallback logic just in case.
   const [authorProfile, setAuthorProfile] = useState<{ full_name?: string; avatar_url?: string | null } | null>(null);
   
   // Comments
@@ -55,10 +55,26 @@ const ReportDetailPage: React.FC = () => {
     const fetchReport = async () => {
       setLoading(true);
       setError(null);
-      setAuthorProfile(null);
+      setAuthorProfile(null); // Reset author profile
 
       try {
-        const data = await getReportById(id);
+        // --- THIS IS THE UPDATED LOGIC ---
+        // We use supabase.rpc or a direct fetch to replicate the PostgREST query
+        // Using the JS client is cleaner:
+        const { data, error: queryError } = await supabase
+          .from('reports')
+          .select('*, user_profiles(full_name, avatar_url)') // This matches your HTML file's query
+          .eq('id', id)
+          .single(); // .single() fetches one record or null, which is perfect
+
+        if (queryError && queryError.code !== 'PGRST116') {
+          // PGRST116 means "exact one row not found", which is not an error for .single()
+          // But we'll treat it as "not found"
+          console.error('Supabase query error:', queryError);
+          throw new Error(queryError.message);
+        }
+        // --- END OF UPDATED LOGIC ---
+
         if (!isMounted) return;
         if (!data) {
           setError('Report not found');
@@ -92,11 +108,12 @@ const ReportDetailPage: React.FC = () => {
           setLocationText(data.location as string);
         }
 
-        // author profile is already included as user_profiles from getReportById
+        // Author profile should now be included directly on `data.user_profiles`
+        // thanks to our new `select` query.
         if (data.user_profiles) {
           setAuthorProfile(data.user_profiles as { full_name?: string; avatar_url?: string | null });
         } else if (data.user_id) {
-          // fallback: try to load profile
+          // This fallback logic can stay, just in case
           (async () => {
             try {
               const { data: up } = await supabase
@@ -106,7 +123,7 @@ const ReportDetailPage: React.FC = () => {
                 .single();
               if (isMounted && up) setAuthorProfile(up as { full_name?: string; avatar_url?: string | null });
             } catch (err) {
-              console.warn('Failed to load author profile', err);
+              console.warn('Failed to load author profile fallback', err);
             }
           })();
         }
@@ -124,7 +141,7 @@ const ReportDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id]); // Removed supabase from dependency array as it's stable
 
   // Comments are now handled by useComments hook
 
@@ -155,6 +172,7 @@ const ReportDetailPage: React.FC = () => {
     }
   };
 
+  // --- THE UI REMAINS UNCHANGED ---
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -195,7 +213,10 @@ const ReportDetailPage: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <h1 className="text-2xl font-bold text-gray-800">{report.title}</h1>
-                <div className="text-sm text-gray-600">{authorProfile?.full_name || (report.is_anonymous ? 'Anonymous' : 'Community Member')}</div>
+                {/* This should work correctly now */}
+                <div className="text-sm text-gray-600">
+                  {authorProfile?.full_name || (report.is_anonymous ? 'Anonymous' : 'Community Member')}
+                </div>
               </div>
 
               <div className="flex items-center gap-3 mb-4">
@@ -206,8 +227,6 @@ const ReportDetailPage: React.FC = () => {
                 }`}>
                   {report.status || 'unknown'}
                 </div>
-
-                {/* Severity field removed because it does not exist on ReportWithProfile */}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -233,7 +252,6 @@ const ReportDetailPage: React.FC = () => {
               </div>
 
               
-
               {/* Comments Section */}
               <div className="mt-8">
                 {commentsLoading ? (
@@ -289,8 +307,6 @@ const ReportDetailPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              
             </div>
           </div>
         )}
