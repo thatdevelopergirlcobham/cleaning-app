@@ -41,14 +41,6 @@ const Navbar: React.FC = () => {
                 Home
               </Link>
               <Link
-                to="/events"
-                className={`font-medium transition-colors ${
-                  isActive('/events') ? 'text-primary' : ' text-white hover:text-primary'
-                }`}
-              >
-                Events
-              </Link>
-              <Link
                 to="/hire-cleaners"
                 className={`font-medium transition-colors ${
                   isActive('/hire-cleaners') ? 'text-primary' : ' text-white hover:text-primary'
@@ -57,12 +49,12 @@ const Navbar: React.FC = () => {
                 Hire Cleaners
               </Link>
               <Link
-                to="/map"
+                to="/reports-map"
                 className={`font-medium transition-colors ${
-                  isActive('/map') ? 'text-primary' : ' text-white hover:text-primary'
+                  isActive('/reports-map') ? 'text-primary' : ' text-white hover:text-primary'
                 }`}
               >
-                Map
+                Reports Map
               </Link>
               <Link
                 to="/upscale"
@@ -188,13 +180,13 @@ const Navbar: React.FC = () => {
               Hire Cleaners
             </Link>
             <Link
-              to="/map"
+              to="/reports-map"
               className={`block font-medium transition-colors ${
-                isActive('/map') ? 'text-primary' : 'text-gray-600 hover:text-primary'
+                isActive('/reports-map') ? 'text-primary' : 'text-gray-600 hover:text-primary'
               }`}
               onClick={toggleMobileMenu}
             >
-              Map
+              Reports Map
             </Link>
             <Link
               to="/upscale"

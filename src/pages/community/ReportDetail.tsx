@@ -11,6 +11,11 @@ import { useComments } from '../../hooks/useComments';
 
 type ReportRow = ReportWithProfile | null;
 
+interface LocationData {
+  lat: number;
+  lng: number;
+}
+
 
 
 const formatDate = (d?: string) => {
@@ -66,17 +71,23 @@ const ReportDetailPage: React.FC = () => {
         setLoading(false);
 
         // Handle location text
-        if (data.location && typeof data.location === 'object' && 'lat' in data.location) {
-          setLocationText(null);
-          (async () => {
-            try {
-              const addr = await reverseGeocode({ lat: data.location.lat, lng: data.location.lng });
-              if (isMounted) setLocationText(addr);
-            } catch (err) {
-              console.warn('Geocode error', err);
-              if (isMounted) setLocationText(`${data.location.lat.toFixed(4)}, ${data.location.lng.toFixed(4)}`);
-            }
-          })();
+        if (data.location) {
+          const location = data.location;
+          if (typeof location === 'object' && 'lat' in location && 'lng' in location) {
+            const locationData = location as LocationData;
+            setLocationText(null);
+            (async () => {
+              try {
+                const addr = await reverseGeocode({ lat: locationData.lat, lng: locationData.lng });
+                if (isMounted) setLocationText(addr);
+              } catch (err) {
+                console.warn('Geocode error', err);
+                if (isMounted) setLocationText(`${locationData.lat.toFixed(4)}, ${locationData.lng.toFixed(4)}`);
+              }
+            })();
+          } else if (typeof location === 'string') {
+            setLocationText(location);
+          }
         } else if (typeof data.location === 'string') {
           setLocationText(data.location as string);
         }
@@ -203,9 +214,11 @@ const ReportDetailPage: React.FC = () => {
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <MapIcon className="w-5 h-5 text-gray-400" />
                   <span>
-                    {report.location && typeof report.location === 'object'
-                      ? (locationText === null ? 'Resolving location...' : locationText)
-                      : (locationText || 'Location not available')}
+                    {report.location 
+                      ? (typeof report.location === 'object' && 'lat' in report.location)
+                        ? (locationText === null ? 'Resolving location...' : locationText)
+                        : (locationText || 'Location not available')
+                      : 'Location not available'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">

@@ -122,12 +122,13 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
   )
 }
 
-export default NotificationProvider;
-
 export const useNotifications = (): NotificationContextType => {
   const ctx = useContext(NotificationContext);
   if (!ctx) {
     throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return ctx;
-}
+};
+
+export { NotificationProvider };
+export default NotificationProvider;

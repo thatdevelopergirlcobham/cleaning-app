@@ -13,14 +13,13 @@ import MobileBottomNav from './components/common/MobileBottomNav'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import Toaster from './components/common/Toaster'
 import AIChatBot from './components/common/AIChatBot'
+import { MapView } from './components/MapView'
 
 // Community Pages
-import CommunityHome from './pages/community/CommunityHome'
-import CommunityHomeTest from './pages/community/CommunityHomeTest'
 import HomeTau from './pages/community/HomeTau'
 import ReportNew from './pages/community/ReportNew'
-import Events from './pages/community/Events'
-import AgentHire from './pages/community/AgentHire'
+// import Events from './pages/community/Events'
+// import AgentHire from './pages/community/AgentHire'
 import Profile from './pages/community/Profile'
 import WasteDetailPage from './pages/community/WasteDetailPage'
 import ReportDetailPage from './pages/community/ReportDetail'
@@ -36,6 +35,7 @@ import Auth from './pages/Auth'
 import About from './pages/About'
 import NotFound from './pages/NotFound'
 import AnalyticsDashboard from './pages/admin/AnalyticsDashboard'
+import AgentHire from './pages/community/AgentHire'
 
 // Redirect component for authenticated users visiting landing page
 const AuthenticatedHomeRedirect: React.FC = () => {
@@ -57,6 +57,7 @@ function App() {
                     <Routes>
                       {/* Public Routes */}
                       <Route path="/" element={<AuthenticatedHomeRedirect />} />
+                      
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/about" element={<About />} />
 
@@ -64,12 +65,10 @@ function App() {
                       <Route path="/home" element={<HomeTau />} />
 
                       {/* Community Routes */}
-                      <Route path="/community" element={<CommunityHome />} />
-                      <Route path="/community-test" element={<CommunityHomeTest />} />
                       <Route path="/report" element={<ReportNew />} />
                       <Route path="/waste-detail/:id" element={<WasteDetailPage />} />
                       <Route path="/reports/:id" element={<ReportDetailPage />} />
-                      <Route path="/events" element={<Events />} />
+                      <Route path="/reports-map" element={<MapView />} />
                       <Route path="/agents" element={<AgentHire />} />
                       <Route path="/hire-cleaners" element={<HireCleaners />} />
                       <Route

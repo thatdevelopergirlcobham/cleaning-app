@@ -34,15 +34,8 @@ const Profile: React.FC = () => {
     }
   }, [profile]);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserReports();
-    }
-  }, [user]);
-
-  const fetchUserReports = async () => {
+  const fetchUserReports = React.useCallback(async () => {
     if (!user) return;
-    
     setLoadingReports(true);
     try {
       const { data, error } = await supabase
@@ -50,7 +43,6 @@ const Profile: React.FC = () => {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setUserReports(data || []);
     } catch (err) {
@@ -63,7 +55,13 @@ const Profile: React.FC = () => {
     } finally {
       setLoadingReports(false);
     }
-  };
+  }, [user, addToast]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserReports();
+    }
+  }, [user, fetchUserReports]);
 
   const handleDeleteReport = async (reportId: string) => {
     if (!confirm('Are you sure you want to delete this report?')) return;
@@ -334,7 +332,6 @@ const Profile: React.FC = () => {
                       <h3 className="font-semibold text-gray-900">{report.title}</h3>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${
                         report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        report.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                         report.status === 'resolved' ? 'bg-green-100 text-green-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>

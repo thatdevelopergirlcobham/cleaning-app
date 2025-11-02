@@ -259,7 +259,9 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                       <MapPin className="w-3 h-3" />
                       <span>
-                        {r.location?.lat?.toFixed(4)}, {r.location?.lng?.toFixed(4)}
+                        {typeof r.location === 'object' && r.location !== null && 'lat' in r.location && 'lng' in r.location
+                          ? `${(r.location as { lat: number; lng: number }).lat.toFixed(4)}, ${(r.location as { lat: number; lng: number }).lng.toFixed(4)}`
+                          : r.location || 'N/A'}
                       </span>
                       <Clock className="w-3 h-3 ml-2" />
                       <span>{new Date(r.created_at).toLocaleDateString()}</span>
@@ -324,7 +326,9 @@ const AdminDashboard: React.FC = () => {
                       <span>{new Date(e.date).toLocaleDateString()}</span>
                       <MapPin className="w-3 h-3" />
                       <span>
-                        {e.location?.lat?.toFixed(4)}, {e.location?.lng?.toFixed(4)}
+                        {typeof e.location === 'object' && e.location !== null && 'lat' in e.location && 'lng' in e.location
+                          ? `${(e.location as { lat: number; lng: number }).lat.toFixed(4)}, ${(e.location as { lat: number; lng: number }).lng.toFixed(4)}`
+                          : e.location || 'N/A'}
                       </span>
                     </div>
                   </div>

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
 import { getReports } from '../../api/reports';
-import type { Report } from '../../api/reports';
+import type { ReportWithProfile } from '../../api/reports';
 import { eventsApi } from '../../api/events'
 import { usersApi } from '../../api/users'
 import { agentsApi } from '../../api/agents'
@@ -66,12 +66,11 @@ const KPIs: React.FC = () => {
   })
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d')
-  const [reports, setReports] = useState<Report[]>([])
-
+  const [reports, setReports] = useState<ReportWithProfile[]>([])
   const fetchReports = useCallback(async () => {
     try {
       const data = await getReports();
-      setReports(data);
+      setReports(data || []);
     } catch (error) {
       console.error('Error fetching reports:', error);
     }
@@ -134,7 +133,7 @@ const KPIs: React.FC = () => {
         totalEvents: allEvents.length,
         totalUsers: allUsers.length,
         totalAgents: allAgents.length,
-        activeUsers: allUsers.filter((u: any) => u.role === 'user').length,
+        activeUsers: allUsers.filter((u) => ('role' in u && u.role === 'user')).length,
         averageResolutionTime: 2.3, // Mock data in hours
         reportsByMonth,
         eventsByMonth,
@@ -155,7 +154,7 @@ const KPIs: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [addToast])
+  }, [addToast, reports])
 
   useEffect(() => {
     loadAnalyticsData()

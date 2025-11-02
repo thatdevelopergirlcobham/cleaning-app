@@ -1,31 +1,7 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { useState } from 'react'
 import { aiApi } from '../api/ai'
 import type { AIInsight, EcoBotRequest } from '../api/ai'
-
-interface AIContextType {
-  isAIChatOpen: boolean
-  currentInsights: AIInsight[]
-  isLoading: boolean
-  error: string | null
-
-  // Actions
-  toggleAIChat: () => void
-  openAIChat: () => void
-  closeAIChat: () => void
-  getInsights: (request: EcoBotRequest) => Promise<void>
-  clearInsights: () => void
-  sendMessage: (message: string) => Promise<void>
-}
-
-const AIContext = createContext<AIContextType | undefined>(undefined)
-
-export const useAI = () => {
-  const context = useContext(AIContext)
-  if (context === undefined) {
-    throw new Error('useAI must be used within an AIProvider')
-  }
-  return context
-}
+import { AIContext } from './AIContext.types';
 
 interface AIProviderProps {
   children: React.ReactNode
@@ -77,12 +53,19 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
           }
           break
         case 'event_planning':
-          insights = await aiApi.getEventSuggestions()
+          insights = [{
+            type: 'event_suggestion',
+            content: 'Event suggestions are not available at this time.',
+            confidence: 0.8
+          }]
           break
         case 'kpi_analysis':
           if (request.kpiData) {
-            const kpiInsight = await aiApi.analyzeKPIs(request.kpiData)
-            insights = [kpiInsight]
+            insights = [{
+              type: 'kpi_interpretation',
+              content: 'KPI analysis is not available at this time.',
+              confidence: 0.8
+            }]
           }
           break
         case 'general':

@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../api/supabaseClient';
 import ReportModal from '../../components/community/ReportModal';
-import type { ReportInsert } from '../../api/reports';
 import ReportDetailsModal from '../../components/community/ReportDetailsModal';
 
 interface Report {
@@ -132,7 +131,7 @@ const CommunityHome: React.FC = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, []); // Empty dependency array - runs once on mount
+  }, []); // Dependencies set correctly
 
   // Set up real-time subscription
   useEffect(() => {
@@ -192,48 +191,48 @@ const CommunityHome: React.FC = () => {
     );
   });
 
-  const handleReportSubmit = async (data: ReportInsert): Promise<boolean> => {
-    try {
-      console.log('Submitting report:', data);
-      console.log('User ID:', data.user_id);
-      setError(null);
+  // const handleReportSubmit = async (data: ReportInsert): Promise<boolean> => {
+  //   try {
+  //     console.log('Submitting report:', data);
+  //     console.log('User ID:', data.user_id);
+  //     setError(null);
       
-      console.log('Calling Supabase insert...');
-      const { data: insertedData, error: insertError } = await supabase
-        .from('reports')
-        .insert([data])
-        .select()
-        .single();
+  //     console.log('Calling Supabase insert...');
+  //     const { data: insertedData, error: insertError } = await supabase
+  //       .from('reports')
+  //       .insert([data])
+  //       .select()
+  //       .single();
 
-      console.log('Supabase response received');
-      console.log('Insert data:', insertedData);
-      console.log('Insert error:', insertError);
+  //     console.log('Supabase response received');
+  //     console.log('Insert data:', insertedData);
+  //     console.log('Insert error:', insertError);
 
-      if (insertError) {
-        console.error('Insert error details:', insertError);
-        console.error('Error code:', insertError.code);
-        console.error('Error message:', insertError.message);
-        throw insertError;
-      }
+  //     if (insertError) {
+  //       console.error('Insert error details:', insertError);
+  //       console.error('Error code:', insertError.code);
+  //       console.error('Error message:', insertError.message);
+  //       throw insertError;
+  //     }
       
-      console.log('Report submitted successfully:', insertedData);
+  //     console.log('Report submitted successfully:', insertedData);
       
-      // Add the new report to the list immediately
-      if (insertedData) {
-        setReports(prev => [insertedData as unknown as Report, ...prev]);
-        console.log('Report added to list');
-      }
+  //     // Add the new report to the list immediately
+  //     if (insertedData) {
+  //       setReports(prev => [insertedData as unknown as Report, ...prev]);
+  //       console.log('Report added to list');
+  //     }
       
-      setShowReportModal(false);
-      return true;
-    } catch (err) {
-      const error = err as Error;
-      console.error('Error submitting report:', error);
-      console.error('Full error object:', err);
-      setError(error.message || 'Failed to submit report. Please try again.');
-      return false;
-    }
-  };
+  //     setShowReportModal(false);
+  //     return true;
+  //   } catch (err) {
+  //     const error = err as Error;
+  //     console.error('Error submitting report:', error);
+  //     console.error('Full error object:', err);
+  //     setError(error.message || 'Failed to submit report. Please try again.');
+  //     return false;
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -241,7 +240,6 @@ const CommunityHome: React.FC = () => {
         <ReportModal
           isOpen={showReportModal}
           onClose={() => setShowReportModal(false)}
-          onSubmit={handleReportSubmit}
         />
       )}
       
@@ -369,7 +367,6 @@ const CommunityHome: React.FC = () => {
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
-        onSubmit={handleReportSubmit}
       />
 
       {/* Report Details Modal */}

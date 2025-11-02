@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Bell, Trash2, Check } from 'lucide-react'
-import { useNotifications } from '../../contexts/NotificationContext'
+import NotificationContext from '../../contexts/NotificationContext'
+import { useContext } from 'react'
 import type { Notification } from '../../api/notifications'
 import Modal from './Modal'
 
@@ -10,8 +11,10 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
+  const notificationCtx = useContext(NotificationContext)
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all')
+  if (!notificationCtx) return null;
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = notificationCtx
 
   const filteredNotifications = notifications.filter((notification: Notification) => {
     if (filter === 'unread') return !notification.read

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react'
-import { useAI } from '../../contexts/AIContext'
+import { useAI } from '../../contexts'
 // import { useAuth } from '../../contexts/AuthContext'
 
 interface Message {
@@ -20,7 +20,7 @@ const AIChatBot: React.FC = () => {
   // Add insights as bot messages when they change
   useEffect(() => {
     if (currentInsights.length > 0) {
-      const newMessages: Message[] = currentInsights.map((insight, index) => ({
+      const newMessages: Message[] = currentInsights.map((insight: { content: string }, index: number) => ({
         id: `insight-${Date.now()}-${index}`,
         type: 'bot',
         content: insight.content,
@@ -65,7 +65,7 @@ const AIChatBot: React.FC = () => {
     return (
       <button
         onClick={toggleAIChat}
-        className="fixed bottom-4 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center z-40"
+        className="fixed bottom-20 md:bottom-4 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center z-40"
         aria-label="Open EcoBot Chat"
       >
         <MessageCircle className="w-6 h-6" />
@@ -74,7 +74,7 @@ const AIChatBot: React.FC = () => {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-[32rem] bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col z-40">
+    <div className="fixed bottom-20 md:bottom-4 right-4 w-96 max-h-[calc(100vh-7rem)] md:h-[32rem] bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col z-40">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">

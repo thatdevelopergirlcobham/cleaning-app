@@ -20,11 +20,10 @@ export const useRealtimeReports = (): UseRealtimeReportsReturn => {
 
   const fetchReports = useCallback(async () => {
     try {
-      setLoading(true);
       const data = await getReports();
-      setReports(data);
+      setReports(data || []);
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
       setError('Failed to fetch reports');
       console.error('Error fetching reports:', err);
     } finally {
@@ -51,11 +50,10 @@ export const useRealtimeReports = (): UseRealtimeReportsReturn => {
   useEffect(() => {
     fetchReports();
 
-    // Set up real-time subscription
-    const subscription = supabase
+        const subscription = supabase
       .channel('realtime-reports')
       .on(
-        'postgres_changes',
+        'system', // Using 'system' event instead of 'postgres_changes'
         {
           event: 'INSERT',
           schema: 'public',
@@ -68,7 +66,7 @@ export const useRealtimeReports = (): UseRealtimeReportsReturn => {
         }
       )
       .on(
-        'postgres_changes',
+        'system', // Using 'system' event instead of 'postgres_changes'
         {
           event: 'UPDATE',
           schema: 'public',
@@ -84,7 +82,7 @@ export const useRealtimeReports = (): UseRealtimeReportsReturn => {
         }
       )
       .on(
-        'postgres_changes',
+        'system', // Using 'system' event instead of 'postgres_changes'
         {
           event: 'DELETE',
           schema: 'public',

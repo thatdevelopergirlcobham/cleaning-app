@@ -55,7 +55,7 @@ const PendingReports: React.FC = () => {
       const insights = await aiApi.getReportInsights({
         title: report.title,
         description: report.description,
-        location: report.location,
+  location: report.location && typeof report.location === 'object' && report.location !== null ? report.location : { lat: 0, lng: 0 },
         imageUrl: report.image_url
       })
       setAiInsights(insights.map(insight => insight.content))
@@ -77,7 +77,7 @@ const PendingReports: React.FC = () => {
       filtered = filtered.filter(report =>
         report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         report.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        report.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  report.user_profiles && report.user_profiles.full_name && report.user_profiles.full_name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
@@ -202,12 +202,12 @@ const PendingReports: React.FC = () => {
                   />
                 </td>
                 <td className="p-2 font-medium">{report.title}</td>
-                <td className="p-2">{report.user.name}</td>
+                <td className="p-2">{report.user_profiles && report.user_profiles.full_name ? report.user_profiles.full_name : 'N/A'}</td>
                 <td className="p-2 flex items-center gap-1">
                   <MapPin size={16} />
-                  {typeof report.location === 'object' 
+                  {typeof report.location === 'object' && report.location !== null
                     ? `${report.location.lat.toFixed(4)}, ${report.location.lng.toFixed(4)}`
-                    : report.location}
+                    : report.location || 'N/A'}
                 </td>
                 <td className="p-2 flex items-center gap-1"><Calendar size={16} />{new Date(report.created_at).toLocaleDateString()}</td>
                 <td className={`p-2 ${getStatusColor(report.status)}`}>{report.status}</td>
@@ -230,12 +230,12 @@ const PendingReports: React.FC = () => {
         >
           <h2 className="text-xl font-semibold mb-2">{selectedReport.title}</h2>
           <p className="text-gray-700 mb-2">{selectedReport.description}</p>
-          <p className="text-gray-600 flex items-center gap-1 mb-1"><User size={16} /> {selectedReport.user.name}</p>
+          <p className="text-gray-600 flex items-center gap-1 mb-1"><User size={16} /> {selectedReport.user_profiles && selectedReport.user_profiles.full_name ? selectedReport.user_profiles.full_name : 'N/A'}</p>
           <p className="text-gray-600 flex items-center gap-1 mb-1">
             <MapPin size={16} />
-            {typeof selectedReport.location === 'object'
+            {typeof selectedReport.location === 'object' && selectedReport.location !== null
               ? `${selectedReport.location.lat.toFixed(4)}, ${selectedReport.location.lng.toFixed(4)}`
-              : selectedReport.location}
+              : selectedReport.location || 'N/A'}
           </p>
           {loadingInsights ? (
             <LoadingSpinner />

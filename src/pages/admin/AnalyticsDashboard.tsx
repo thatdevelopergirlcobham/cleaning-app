@@ -8,10 +8,11 @@ import {
   Clock,
   Activity
 } from 'lucide-react'
-import type { ReportWithProfile, Report } from '../../api/reports'
+import type { ReportWithProfile } from '../../api/reports'
+import type { EventWithProfile } from '../../api/events'
 import { getReports } from '../../api/reports'
 import { eventsApi } from '../../api/events'
-import { usersApi } from '../../api/users'
+// import { usersApi } from '../../api/users'
 import {
   XAxis,
   YAxis,
@@ -85,12 +86,10 @@ const AnalyticsDashboard: React.FC = () => {
       // Load all data in parallel
       const [
         reportsResponse,
-        eventsResponse,
-        usersResponse
+        eventsResponse
       ] = await Promise.all([
         getReports(),
-        eventsApi.getAllEvents(),
-        usersApi.getAllUsers()
+        eventsApi.getAllEvents()
       ])
 
       const allReports = reportsResponse || []
@@ -100,17 +99,16 @@ const AnalyticsDashboard: React.FC = () => {
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const recentReports = allReports.filter((report: Report) =>
+      const recentReports = allReports.filter((report: ReportWithProfile) =>
         new Date(report.created_at) >= thirtyDaysAgo
       )
 
       // Group by date and status
       const reportTrendsMap = new Map<string, { pending: number; approved: number; rejected: number; resolved: number }>()
 
-      recentReports.forEach((report: Report) => {
+      recentReports.forEach((report: ReportWithProfile) => {
         const date = new Date(report.created_at).toISOString().split('T')[0]
         const current = reportTrendsMap.get(date) || { pending: 0, approved: 0, rejected: 0, resolved: 0 }
-
         switch (report.status) {
           case 'pending':
             current.pending++
@@ -125,7 +123,6 @@ const AnalyticsDashboard: React.FC = () => {
             current.resolved++
             break
         }
-
         reportTrendsMap.set(date, current)
       })
 
@@ -135,10 +132,10 @@ const AnalyticsDashboard: React.FC = () => {
 
       // Status distribution
       const statusCounts = {
-        pending: allReports.filter((r: Report) => r.status === 'pending').length,
-        approved: allReports.filter((r: Report) => r.status === 'approved').length,
-        rejected: allReports.filter((r: Report) => r.status === 'rejected').length,
-        resolved: allReports.filter((r: Report) => r.status === 'resolved').length
+        pending: allReports.filter((r: ReportWithProfile) => r.status === 'pending').length,
+        approved: allReports.filter((r: ReportWithProfile) => r.status === 'approved').length,
+        rejected: allReports.filter((r: ReportWithProfile) => r.status === 'rejected').length,
+        resolved: allReports.filter((r: ReportWithProfile) => r.status === 'resolved').length
       }
 
       const statusDistribution = [
@@ -149,18 +146,26 @@ const AnalyticsDashboard: React.FC = () => {
       ]
 
       // Location hotspots (top 10 locations by report count)
-      const locationCounts = allEvents.reduce<Record<string, LocationCount>>((acc: Record<string, LocationCount>, event: any) => {
-        const location = event.location
-        if (!acc[location]) {
-          acc[location] = {
-            location,
+      const locationCounts = allEvents.reduce<Record<string, LocationCount>>((acc: Record<string, LocationCount>, event: EventWithProfile) => {
+        let lat = 0, lng = 0;
+        let locationKey = '';
+        if (typeof event.location === 'object' && event.location !== null && 'lat' in event.location && 'lng' in event.location) {
+          lat = event.location.lat;
+          lng = event.location.lng;
+          locationKey = `${lat},${lng}`;
+        } else {
+          locationKey = String(event.location);
+        }
+        if (!acc[locationKey]) {
+          acc[locationKey] = {
+            location: locationKey,
             count: 0,
-            lat: event.lat || 0,
-            lng: event.lng || 0
+            lat,
+            lng
           }
         }
-        acc[location].count++
-        return acc
+        acc[locationKey].count++;
+        return acc;
       }, {})
 
       const locationHotspots = Object.values(locationCounts)
@@ -170,14 +175,14 @@ const AnalyticsDashboard: React.FC = () => {
       // User activity (reports and events over time)
       const userActivityMap = new Map<string, { reports: number; events: number }>()
 
-      recentReports.forEach((report: Report) => {
+  recentReports.forEach((report: ReportWithProfile) => {
         const date = new Date(report.created_at).toISOString().split('T')[0]
         const current = userActivityMap.get(date) || { reports: 0, events: 0 }
         current.reports++
         userActivityMap.set(date, current)
       })
 
-      allEvents.forEach((event: any) => {
+  allEvents.forEach((event: { date: string }) => {
         const date = new Date(event.date).toISOString().split('T')[0]
         const current = userActivityMap.get(date) || { reports: 0, events: 0 }
         current.events++
@@ -206,7 +211,7 @@ const AnalyticsDashboard: React.FC = () => {
       )
 
       const topReporters = reporterCounts
-        .map(([userId, data]: [string, Reporter]) => ({ ...data }))
+        .map(([, data]: [string, Reporter]) => ({ ...data }))
         .sort((a, b) => b.report_count - a.report_count)
         .slice(0, 10)
 
