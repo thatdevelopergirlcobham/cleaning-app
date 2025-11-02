@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Mail, Lock, User, ArrowLeft } from 'lucide-react';
 
@@ -38,6 +38,13 @@ const Auth: React.FC = () => {
           message: 'Account created successfully. Please check your email for verification.'
         });
       } else {
+        // If this is the test admin email, send the user to the admin login page
+        if (formData.email === import.meta.env.VITE_TEST_ADMIN_EMAIL) {
+          navigate('/admin/login')
+          setLoading(false)
+          return
+        }
+
         const { error } = await signIn(formData.email, formData.password);
         if (error) throw error;
         navigate('/home');

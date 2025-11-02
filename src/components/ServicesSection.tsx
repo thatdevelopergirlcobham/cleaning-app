@@ -2,45 +2,45 @@ import { Link } from "react-router-dom";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
-// @ts-ignore
+// @ts-expect-error: importing CSS from Swiper (no types)
 import "swiper/css";
-// @ts-ignore
+// @ts-expect-error: importing CSS from Swiper (no types)
 import "swiper/css/navigation";
-// @ts-ignore
+// @ts-expect-error: importing CSS from Swiper (no types)
 import "swiper/css/pagination";
 
 const servicesData = [
   {
-    image: "/img/cleaning.jpg",
-    title: "House Cleaning",
+   image: "/img/report-waste.jpg",
+   title: "Report Waste Issues",
     description:
-      "We offer premium cleaning services for every room in your home to meet the specific needs of your family!",
+    "Help keep Calabar clean by reporting waste issues in your community. Together we can make a difference!",
     features: [
-      "Premium cleaning tailored to every room in your home.",
-      "Premium cleaning tailored to every room in your home.",
-      "Premium cleaning tailored to every room in your home.",
+    "Easy reporting through our mobile app",
+    "Real-time tracking of cleanup progress",
+    "Direct communication with waste management teams",
     ],
   },
   {
-    image: "https://placehold.co/400x450/e2f0c9/1E3928?text=Office+Cleaning",
-    title: "Office Cleaning",
+   image: "https://placehold.co/400x450/e2f0c9/1E3928?text=Community+Events",
+   title: "Community Cleanup Events",
     description:
-      "A clean office environment boosts productivity. We handle everything from desks to break rooms.",
+    "Join or organize community cleanup events in your neighborhood. Build a stronger, cleaner community together.",
     features: [
-      "Flexible scheduling (after hours, weekends).",
-      "Disinfection of high-touch surfaces.",
-      "Reliable and professional janitorial services.",
+    "Organize neighborhood cleanup drives",
+    "Connect with local environmental groups",
+    "Track community impact and progress",
     ],
   },
   {
-    image: "https://placehold.co/400x450/e2f0c9/1E3928?text=Deep+Cleaning",
-    title: "Deep Cleaning",
+   image: "https://placehold.co/400x450/e2f0c9/1E3928?text=Waste+Education",
+   title: "Waste Education",
     description:
-      "Our deep cleaning service is perfect for spring cleaning or moving in/out.",
+    "Learn about proper waste management and environmental conservation through our educational resources.",
     features: [
-      "Inside of appliances (oven, fridge).",
-      "Baseboards, window sills, and blinds.",
-      "Detailed grout and tile scrubbing.",
+    "Access educational materials on waste management",
+    "Learn about recycling and composting",
+    "Get tips for reducing environmental impact",
     ],
   },
 ];
@@ -53,28 +53,27 @@ const ServicesSection = () => {
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-6 mb-12">
           <div className="md:w-1/2">
             <h2 className="text-4xl md:text-5xl font-extrabold text-[#0f3b2e] leading-tight">
-              Our Cleaning Services
+                Our Community Services
             </h2>
             <p className="mt-4 text-gray-500 max-w-2xl leading-relaxed">
-              At BlueSpring Cleaning, our goal is to provide tailored cleaning
-              packages that cater to your specific needs. Choose the package
-              that best fits your home best s and experience the difference!
+                Join our community-driven initiative to keep Calabar clean and sustainable.
+                Report issues, participate in events, and learn about proper waste management.
             </p>
           </div>
 
           <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4">
             <Link
-              to="/book"
+                to="/report"
               className="px-6 py-3 rounded-full bg-[#81d742] text-[#0f3b2e] font-semibold hover:bg-[#73c13c] transition"
             >
-              Book A Cleaning Now
+                Report an Issue
             </Link>
-            <a
-              href="tel:3033094226"
+              <Link
+                to="/events"
               className="px-6 py-3 rounded-full border border-[#0f3b2e] text-[#0f3b2e] font-semibold hover:bg-gray-100 transition"
             >
-              (303) 309 4226
-            </a>
+                Join an Event
+              </Link>
           </div>
         </div>
 

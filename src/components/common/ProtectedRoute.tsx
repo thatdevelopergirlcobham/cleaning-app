@@ -38,14 +38,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  const isDevAdmin = typeof window !== 'undefined' && !!localStorage.getItem('dev_admin_logged_in')
+
   if (!user) {
-    // Redirect to auth page with return url
-    return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />
+    // Allow developer admin access when dev flag is set and route requires admin
+    if (requireAdmin && isDevAdmin) {
+      // allow through (no user profile available but flagged as dev admin)
+    } else {
+      // Redirect to auth page with return url
+      return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />
+    }
   }
 
-  // Check role-based access
-  if (requireAdmin && profile?.role !== 'admin') {
-    return <Navigate to="/unauthorized" replace />
+  // Check role-based access and admin email
+  if (requireAdmin) {
+    const isDevAdmin = typeof window !== 'undefined' && !!localStorage.getItem('dev_admin_logged_in')
+    const isEnvAdminEmail = user?.email === import.meta.env.VITE_TEST_ADMIN_EMAIL
+    if (profile?.role !== 'admin' && !isEnvAdminEmail && !isDevAdmin) {
+      return <Navigate to="/unauthorized" replace />
+    }
   }
 
   if (requireAgent && profile?.role !== 'agent' && profile?.role !== 'admin') {

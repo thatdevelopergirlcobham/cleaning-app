@@ -29,6 +29,7 @@ import HireCleaners from './pages/community/HireCleaners'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import PendingReports from './pages/admin/PendingReports'
 import Agents from './pages/admin/Agents'
+import AdminLogin from './pages/admin/AdminLogin'
 
 // Auth & Other Pages
 import Auth from './pages/Auth'
@@ -81,6 +82,7 @@ function App() {
                       />
 
                       {/* Admin Routes */}
+                      <Route path="/admin/login" element={<AdminLogin />} />
                       <Route
                         path="/admin"
                         element={

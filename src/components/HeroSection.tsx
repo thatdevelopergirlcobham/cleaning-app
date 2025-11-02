@@ -12,25 +12,25 @@ const HeroSection: React.FC = () => {
             <div className="items-center">
               <div className="text-center">
                 <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                  <span className="block" style={{ color: 'white' }}>Where Spotless</span>
-                  <span className="block mt-2 text-white"> Meets Seamless.</span>
+              <span className="block" style={{ color: 'white' }}>Clean Calabar</span>
+              <span className="block mt-2 text-white">Together We Keep Our City Clean</span>
                 </h1>
                 <p className="mt-6 text-lg text-gray-300 text-center ">
-                  Join our premium cleaning service platform connecting you with verified cleaning professionals. Experience spotless spaces and seamless scheduling with our community of trusted cleaners.
+              Join our community-driven platform to report waste issues, organize cleanup events, and make Calabar a cleaner, healthier city. Together, we can create lasting environmental change.
                 </p>
                 <div className="mt-8 md:flex justify-center items-center sm:flex-row gap-4 ">
                   <Link
                     to="/auth?mode=signup"
                     className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-full text-white bg-lime-500 transition-colors"
                   >
-                    Book a Clean
+                Report Issue
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </Link>
                   <Link
-                    to="/services"
+                to="/reports-map"
                     className="inline-flex items-center justify-center px-8  py-3 border-2 border-lime-500 text-green-500 text-base font-medium rounded-full bg-transparent transition-colors"
                   >
-                    View Services
+                View Reports
                   </Link>
                 </div>
               </div>
