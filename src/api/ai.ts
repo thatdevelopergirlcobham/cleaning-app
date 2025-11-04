@@ -1,11 +1,13 @@
-const GEMINI_API_KEY =
-  import.meta.env.VITE_GEMINI_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY";
+// Get API key from environment variables
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-// Use a generally available v1 model endpoint. The older `gemini-1.5-flash-latest:generateContent`
-// path is not available on v1beta for all projects which caused the 404 the app saw.
-// Switch to a stable text-bison model endpoint and use a flexible parser for responses.
-// Direct Google AI API endpoint with proper version and model
+// Gemini API configuration
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+
+// Validate API key on import
+if (!GEMINI_API_KEY) {
+  console.warn("Warning: VITE_GEMINI_API_KEY is not set. AI features will not work.");
+}
 
 export interface AIInsight {
   type:
@@ -40,15 +42,17 @@ export interface EcoBotRequest {
 }
 
 class AIApiService {
-  private validateApiKey() {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 10) {
-      throw new Error("Invalid API key. Please check your VITE_GEMINI_API_KEY environment variable.");
-    }
-  }
+  // private validateApiKey() {
+  //   if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 10) {
+  //     throw new Error("Invalid API key. Please check your VITE_GEMINI_API_KEY environment variable.");
+  //   }
+  // }
 
   async testGemini(prompt: string): Promise<string> {
     try {
-      this.validateApiKey();
+      if (!GEMINI_API_KEY) {
+        throw new Error("Gemini API key is not configured. Please set VITE_GEMINI_API_KEY in your .env file.");
+      }
 
       const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: "POST",
@@ -129,11 +133,25 @@ class AIApiService {
 
   // ---- example real feature (chat) using testGemini ----
   async chatWithEcoBot(userMessage: string): Promise<string> {
+    if (!GEMINI_API_KEY) {
+      return "⚠️ AI Assistant is not configured. Please check your API key settings.";
+    }
+
     const prompt = `
 You are EcoBot, an AI assistant for a waste management app in Calabar, Nigeria called CleanCal.
+Your role is to help users with waste management, recycling, and environmental questions.
+Be friendly, concise, and provide practical advice.
+
 User message: ${userMessage}
-Provide a short, helpful, and friendly answer.`;
-    return await this.testGemini(prompt);
+
+Please provide a helpful response in 2-3 sentences.`;
+    
+    try {
+      return await this.testGemini(prompt);
+    } catch (error) {
+      console.error('Error in chatWithEcoBot:', error);
+      return "⚠️ Sorry, I'm having trouble connecting to the AI service. Please try again later.";
+    }
   }
 
   // ---- example for report insights ----

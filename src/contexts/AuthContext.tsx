@@ -28,33 +28,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [])
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadUserProfile(session.user.id)
-      } else {
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setSession(session)
+        setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          await loadUserProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error)
         setLoading(false)
       }
-    })
+    }
+
+    getInitialSession()
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event)
+        setSession(session)
+        setUser(session?.user ?? null)
 
-      if (session?.user) {
-        await loadUserProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
+        if (session?.user) {
+          await loadUserProfile(session.user.id)
+        } else {
+          setProfile(null)
+          setLoading(false)
+        }
       }
-    })
+    )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription?.unsubscribe()
+    }
   }, [loadUserProfile])
 
 

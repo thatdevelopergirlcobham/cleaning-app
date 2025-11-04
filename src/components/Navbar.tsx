@@ -28,9 +28,9 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="bg-green-900 top-0 z-50">
+    <nav className="bg-green-900 top-0 z-50 ">
       <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between max-w-6xl">
           {/* Logo - Left Side */}
           <div className="text-2xl font-bold text-lime-500 hidden md:block">CleanCal</div>
 
@@ -41,11 +41,11 @@ const Navbar: React.FC = () => {
                 <Link to="/home" className="text-white hover:text-lime-300 flex items-center transition-colors">
                   <Home className="w-5 h-5 mr-1" /> Home
                 </Link>
-                <Link to="/map" className="text-white hover:text-lime-300 flex items-center transition-colors">
-                  <span className="w-5 h-5 mr-1">🗺️</span> Map
+                <Link to="/report-map" className="text-white hover:text-lime-300 flex items-center transition-colors">
+                  <span className="w-5 h-5 mr-1">🗺️</span> Report Map
                 </Link>
-                <Link to="/upcycle" className="text-white hover:text-lime-300 flex items-center transition-colors">
-                  <span className="w-5 h-5 mr-1">♻️</span> Upcycle
+                <Link to="/hire-cleaners" className="text-white hover:text-lime-300 flex items-center transition-colors">
+                  <span className="w-5 h-5 mr-1">♻️</span> Hire Cleaners
                 </Link>
               </div>
             ) : (

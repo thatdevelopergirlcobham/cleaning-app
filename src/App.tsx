@@ -21,7 +21,6 @@ import ReportNew from './pages/community/ReportNew'
 // import Events from './pages/community/Events'
 // import AgentHire from './pages/community/AgentHire'
 import Profile from './pages/community/Profile'
-import WasteDetailPage from './pages/community/WasteDetailPage'
 import ReportDetailPage from './pages/community/ReportDetail'
 import HireCleaners from './pages/community/HireCleaners'
 
@@ -67,7 +66,6 @@ function App() {
 
                       {/* Community Routes */}
                       <Route path="/report" element={<ReportNew />} />
-                      <Route path="/waste-detail/:id" element={<WasteDetailPage />} />
                       <Route path="/reports/:id" element={<ReportDetailPage />} />
                       <Route path="/reports-map" element={<MapView />} />
                       <Route path="/agents" element={<AgentHire />} />

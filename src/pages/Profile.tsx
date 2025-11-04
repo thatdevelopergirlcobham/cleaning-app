@@ -63,7 +63,7 @@ const Profile: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-  setFormData((prev: typeof formData) => ({ ...prev, [name]: value }));
+    setFormData((prev: typeof formData) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,8 +71,14 @@ const Profile: React.FC = () => {
     setLoading(true);
 
     try {
-      const { success, error } = await updateProfile(formData);
-      if (!success || error) throw error;
+      const { success, error } = await updateProfile({
+        full_name: formData.full_name,
+        phone: formData.phone,
+        // Don't update avatar_url if it's not changed
+        ...(formData.avatar_url && { avatar_url: formData.avatar_url })
+      });
+      
+      if (!success || error) throw error || new Error('Failed to update profile');
 
       addToast({
         type: 'success',
@@ -81,10 +87,11 @@ const Profile: React.FC = () => {
       });
       setEditMode(false);
     } catch (error) {
+      console.error('Profile update error:', error);
       addToast({
         type: 'error',
         title: 'Error',
-        message: error instanceof Error ? error.message : 'Failed to update profile'
+        message: error instanceof Error ? error.message : 'Failed to update profile. Please try again.'
       });
     } finally {
       setLoading(false);
@@ -131,47 +138,51 @@ const Profile: React.FC = () => {
   if (!profile) return <LoadingSpinner />;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Profile Section */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold">Profile</h1>
-            {editMode ? (
-              <div className="flex gap-2">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          {/* Profile Header */}
+          <div className="px-6 py-5 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Profile</h2>
+              {!editMode ? (
                 <button
-                  onClick={() => {
-                    setEditMode(false);
-                    setFormData({
-                      full_name: profile.full_name,
-                      phone: profile.phone || '',
-                    });
-                  }}
-                  className="flex items-center gap-1 text-gray-600 hover:text-gray-800"
+                  onClick={() => setEditMode(true)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  <X size={18} />
-                  <span>Cancel</span>
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Profile
                 </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex items-center gap-1 text-green-600 hover:text-green-800"
-                >
-                  <Save size={18} />
-                  <span>{loading ? 'Saving...' : 'Save'}</span>
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setEditMode(true)}
-                className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
-              >
-                <Edit2 size={18} />
-                <span>Edit</span>
-              </button>
-            )}
+              ) : (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setEditMode(false)}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <>
+                        <LoadingSpinner className="h-4 w-4 mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>

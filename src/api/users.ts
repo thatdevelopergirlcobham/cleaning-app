@@ -1,39 +1,50 @@
 import { supabase } from './supabaseClient'
-import type { Database } from './supabaseClient'
 
-type UserProfileInsert = Database['public']['Tables']['user_profiles']['Insert']
-type UserProfileUpdate = Database['public']['Tables']['user_profiles']['Update']
+export type UserProfile = {
+  id: string
+  full_name: string | null
+  avatar_url?: string | null
+  phone?: string | null
+  role?: string
+  created_at: string
+  updated_at: string
+}
 
 export const usersApi = {
-  // Get user profile by ID
-  async getUserProfile(userId: string) {
+  async getUserProfile(userId: string): Promise<UserProfile> {
+    // First try to get the profile
     const { data, error } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .select('*')
       .eq('id', userId)
       .single()
 
+    // If no profile exists, create one
+    if (error && error.code === 'PGRST116') {
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert([{ id: userId }])
+        .select()
+        .single()
+      
+      if (createError) throw createError
+      return newProfile
+    }
+
     if (error) throw error
     return data
   },
 
-  // Create user profile
-  async createUserProfile(profile: UserProfileInsert) {
+  async updateUserProfile(userId: string, updates: Partial<Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>>): Promise<UserProfile> {
+    // Ensure the profile exists
+    await this.getUserProfile(userId)
+    
     const { data, error } = await supabase
-      .from('user_profiles')
-      .insert(profile)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  // Update user profile
-  async updateUserProfile(userId: string, updates: UserProfileUpdate) {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', userId)
       .select()
       .single()
@@ -45,7 +56,7 @@ export const usersApi = {
   // Get all agents
   async getAgents() {
     const { data, error } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .select('*')
       .eq('role', 'agent')
       .order('full_name')
@@ -67,9 +78,9 @@ export const usersApi = {
   },
 
   // Update user role (admin only)
-  async updateUserRole(userId: string, role: UserProfileUpdate['role']) {
+  async updateUserRole(userId: string, role: string) {
     const { data, error } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .update({ role, updated_at: new Date().toISOString() })
       .eq('id', userId)
       .select()
