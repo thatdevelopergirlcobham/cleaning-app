@@ -1,10 +1,7 @@
-// Get API key from environment variables
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-// Gemini API configuration
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
-// Validate API key on import
 if (!GEMINI_API_KEY) {
   console.warn("Warning: VITE_GEMINI_API_KEY is not set. AI features will not work.");
 }
@@ -42,11 +39,6 @@ export interface EcoBotRequest {
 }
 
 class AIApiService {
-  // private validateApiKey() {
-  //   if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 10) {
-  //     throw new Error("Invalid API key. Please check your VITE_GEMINI_API_KEY environment variable.");
-  //   }
-  // }
 
   async testGemini(prompt: string): Promise<string> {
     try {
@@ -131,7 +123,6 @@ class AIApiService {
     }
   }
 
-  // ---- example real feature (chat) using testGemini ----
   async chatWithEcoBot(userMessage: string): Promise<string> {
     if (!GEMINI_API_KEY) {
       return "⚠️ AI Assistant is not configured. Please check your API key settings.";
@@ -140,11 +131,11 @@ class AIApiService {
     const prompt = `
 You are EcoBot, an AI assistant for a waste management app in Calabar, Nigeria called CleanCal.
 Your role is to help users with waste management, recycling, and environmental questions.
-Be friendly, concise, and provide practical advice.
+Be direct and provide practical advice without any greeting or introduction.
 
 User message: ${userMessage}
 
-Please provide a helpful response in 2-3 sentences.`;
+Provide a helpful response in 2-3 sentences.`;
     
     try {
       return await this.testGemini(prompt);
