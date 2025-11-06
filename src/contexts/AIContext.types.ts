@@ -12,6 +12,7 @@ export interface AIContextType {
   getInsights: (request: EcoBotRequest) => Promise<void>;
   clearInsights: () => void;
   sendMessage: (message: string) => Promise<void>;
+  getChatHistory: () => Promise<Array<{ role: 'user' | 'assistant'; content: string; created_at: string }>>;
 }
 
 export const AIContext = createContext<AIContextType | undefined>(undefined);

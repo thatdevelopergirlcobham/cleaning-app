@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Send, Bot, User } from 'lucide-react'
+import { MessageCircle, X, Send, Bot, User, Minimize2, Maximize2, Trash2 } from 'lucide-react'
 import { useAI } from '../../contexts'
 // import { useAuth } from '../../hooks/useAuth'
 
@@ -11,9 +11,10 @@ interface Message {
 }
 
 const AIChatBot: React.FC = () => {
-  const { isAIChatOpen, toggleAIChat, currentInsights, sendMessage, isLoading } = useAI()
+  const { isAIChatOpen, toggleAIChat, currentInsights, sendMessage, isLoading, clearInsights, getChatHistory } = useAI()
   // const { profile } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
+  const [isExpanded, setIsExpanded] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -30,6 +31,28 @@ const AIChatBot: React.FC = () => {
       setMessages(prev => [...prev, ...newMessages])
     }
   }, [currentInsights])
+
+  // Load stored chat history on open
+  useEffect(() => {
+    if (!isAIChatOpen) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const history = await getChatHistory?.()
+        if (!history || cancelled) return
+        if (history.length > 0) {
+          const mapped: Message[] = (history as Array<{ role: 'user' | 'assistant'; content: string; created_at: string }>).map((h: { role: 'user' | 'assistant'; content: string; created_at: string }, i: number) => ({
+            id: `hist-${i}-${h.created_at}`,
+            type: h.role === 'user' ? 'user' : 'bot',
+            content: h.content,
+            timestamp: new Date(h.created_at),
+          }))
+          setMessages(mapped)
+        }
+      } catch {}
+    })()
+    return () => { cancelled = true }
+  }, [isAIChatOpen, getChatHistory])
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -74,7 +97,7 @@ const AIChatBot: React.FC = () => {
   }
 
   return (
-    <div className="fixed bottom-20 md:bottom-4 right-4 w-96 max-h-[calc(100vh-7rem)] md:h-[32rem] bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col z-40">
+    <div className={`fixed bottom-20 md:bottom-4 right-4 ${isExpanded ? 'w-[28rem] md:h-[36rem]' : 'w-96 md:h-[32rem]'} max-h-[calc(100vh-7rem)] bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col z-40`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">
@@ -86,12 +109,29 @@ const AIChatBot: React.FC = () => {
             <p className="text-xs text-gray-500">AI Waste Management Assistant</p>
           </div>
         </div>
-        <button
-          onClick={toggleAIChat}
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => { setMessages([]); clearInsights?.() }}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Clear chat"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setIsExpanded(v => !v)}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title={isExpanded ? 'Minimize' : 'Expand'}
+          >
+            {isExpanded ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={toggleAIChat}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}

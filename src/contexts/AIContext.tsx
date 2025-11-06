@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { aiApi } from '../api/ai'
 import type { AIInsight, EcoBotRequest } from '../api/ai'
 import { AIContext } from './AIContext.types';
+import { useAuth } from '../hooks/useAuth'
+import { aiChatService } from '../api/aiChatService'
 
 interface AIProviderProps {
   children: React.ReactNode
@@ -12,6 +14,7 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
   const [currentInsights, setCurrentInsights] = useState<AIInsight[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   const toggleAIChat = () => {
     if (!isAIChatOpen && currentInsights.length === 0) {
@@ -23,6 +26,18 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
       }])
     }
     setIsAIChatOpen(!isAIChatOpen)
+  }
+
+  // Helper to fetch chat history for current user
+  const getChatHistory = async () => {
+    if (!user?.id) return [] as { role: 'user' | 'assistant', content: string, created_at: string }[]
+    try {
+      const rows = await aiChatService.fetchMessages(user.id, 200)
+      return rows.map(r => ({ role: r.role as 'user' | 'assistant', content: r.content, created_at: r.created_at }))
+    } catch (e) {
+      console.warn('Load chat history failed', e)
+      return []
+    }
   }
   
   const openAIChat = () => {
@@ -92,13 +107,35 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
     setError(null)
 
     try {
-      console.log('Sending message to Gemini:', message)
-      
-      // Call Gemini API directly for chat
-      const botResponse = await aiApi.chatWithEcoBot(message)
-      
-      console.log('Received response from Gemini:', botResponse)
-      
+      // 1) Persist user message if authenticated
+      if (user?.id) {
+        try { await aiChatService.appendMessage(user.id, 'user', message) } catch (e) { console.warn('Persist user msg failed', e) }
+      }
+
+      // 2) Try primary endpoint: cleancal-ai
+      let botResponse: string | null = null
+      try {
+        const resp = await fetch('https://cleancal-ai.vercel.app/ask-agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: message }),
+        })
+        if (resp.ok) {
+          const data = await resp.json()
+          botResponse = (data?.response ?? '').toString()
+        } else {
+          const txt = await resp.text()
+          console.warn('AI endpoint error', resp.status, txt)
+        }
+      } catch (e) {
+        console.warn('AI endpoint fetch failed, falling back to Gemini', e)
+      }
+
+      // 3) Fallback to Gemini service if needed
+      if (!botResponse || botResponse.trim().length === 0) {
+        botResponse = await aiApi.chatWithEcoBot(message)
+      }
+
       // Convert the response to an AIInsight format
       const responseInsight: AIInsight = {
         type: 'eco_tip',
@@ -108,6 +145,11 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
 
       // Add the bot's response to current insights
       setCurrentInsights(prev => [...prev, responseInsight])
+
+      // 4) Persist bot response if authenticated
+      if (user?.id) {
+        try { await aiChatService.appendMessage(user.id, 'assistant', botResponse) } catch (e) { console.warn('Persist bot msg failed', e) }
+      }
     } catch (err) {
       const error = err as Error
       const errorMessage = error.message || 'Failed to send message. Please try again.'
@@ -142,6 +184,7 @@ export const AIProvider: React.FC<AIProviderProps> = ({ children }) => {
     getInsights,
     clearInsights,
     sendMessage,
+    getChatHistory,
   }
 
   return (

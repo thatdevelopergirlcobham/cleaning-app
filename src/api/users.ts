@@ -121,4 +121,15 @@ export const usersApi = {
     if (error) throw error
     return data
   },
+
+  // Delete user profile (admin only)
+  async deleteUserProfile(userId: string) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId)
+
+    if (error) throw error
+    return true
+  },
 }

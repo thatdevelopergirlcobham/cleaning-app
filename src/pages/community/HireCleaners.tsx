@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../api/supabaseClient';
-// import { useNavigate } from 'react-router-dom';
-// import { MapIcon, CalendarIcon, ClockIcon, CurrencyDollarIcon, HomeIcon } from '@heroicons/react/24/outline';
 
 interface CleaningRequest {
   name: string;
@@ -30,13 +28,84 @@ const initialState: CleaningRequest = {
   location: null,
 };
 
+type Suggestion = { display_name: string; lat: string; lon: string };
+
 const HireCleaners: React.FC = () => {
   const { user } = useAuth();
-//   const navigate = useNavigate();
   const [formData, setFormData] = useState<CleaningRequest>(initialState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [timeError, setTimeError] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const validateTime = useCallback((time: string) => {
+    if (!time) return 'Time is required';
+    const [hh, mm] = time.split(':').map(Number);
+    const total = hh * 60 + mm;
+    const start = 9 * 60;
+    const end = 17 * 60;
+    if (total < start || total > end) return 'Service time must be between 09:00 and 17:00';
+    return null;
+  }, []);
+
+  const validateDate = useCallback((dateStr: string) => {
+    if (!dateStr) return 'Date is required';
+    const d = new Date(dateStr + 'T00:00:00');
+    if (d.getUTCDay() === 0) return 'Sundays are not available. Please choose another date';
+    return null;
+  }, []);
+
+  const onDateChange = (value: string) => {
+    const err = validateDate(value);
+    setDateError(err);
+    setFormData(prev => ({ ...prev, service_date: value }));
+  };
+
+  const onTimeChange = (value: string) => {
+    const err = validateTime(value);
+    setTimeError(err);
+    setFormData(prev => ({ ...prev, service_time: value }));
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported on this device');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setFormData(prev => ({ ...prev, location: { lat: latitude, lng: longitude } }));
+      },
+      () => setError('Unable to get current location'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      const q = placeQuery.trim();
+      if (!q) { setSuggestions([]); return; }
+      setIsSearching(true);
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`;
+        const res = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'CleanCal/1.0' } });
+        const data = (await res.json()) as Suggestion[];
+        if (active) setSuggestions(Array.isArray(data) ? data : []);
+      } catch {
+        if (active) setSuggestions([]);
+      } finally {
+        if (active) setIsSearching(false);
+      }
+    };
+    const t = setTimeout(run, 300);
+    return () => { active = false; clearTimeout(t); };
+  }, [placeQuery]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -50,23 +119,27 @@ const HireCleaners: React.FC = () => {
       return;
     }
 
+    const dErr = validateDate(formData.service_date);
+    const tErr = validateTime(formData.service_time);
+    setDateError(dErr);
+    setTimeError(tErr);
+    if (dErr || tErr) return;
+
     setLoading(true);
     setError(null);
 
     try {
       const { error: insertError } = await supabase
         .from('cleaning_requests')
-        .insert([{
-          ...formData,
-          user_id: user.id,
-          status: 'pending'
-        }]);
+        .insert([{ ...formData, user_id: user.id, status: 'pending' }]);
 
       if (insertError) throw insertError;
 
       setSuccess(true);
       setFormData(initialState);
-      
+      setPlaceQuery('');
+      setSuggestions([]);
+
       // Reset success message after 5 seconds
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
@@ -156,13 +229,46 @@ const HireCleaners: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Address */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <div className="md:col-span-2 space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">Service Location</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={useCurrentLocation} className="px-3 py-2 border rounded-md">Use my current location</button>
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="Search for a place"
+                        value={placeQuery}
+                        onChange={(e) => setPlaceQuery(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      />
+                      {isSearching && (
+                        <div className="absolute right-2 top-2 text-xs text-gray-500">Searching...</div>
+                      )}
+                      {placeQuery && suggestions.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border rounded-md shadow">
+                          {suggestions.map((s, idx) => (
+                            <button
+                              type="button"
+                              key={`${s.lat}-${s.lon}-${idx}`}
+                              className="block w-full text-left px-3 py-2 hover:bg-gray-50"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, address: s.display_name, location: { lat: parseFloat(s.lat), lng: parseFloat(s.lon) } }));
+                                setPlaceQuery(s.display_name);
+                                setSuggestions([]);
+                              }}
+                            >
+                              {s.display_name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <input
                     type="text"
                     name="address"
                     required
+                    placeholder="Selected address"
                     value={formData.address}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
@@ -178,9 +284,10 @@ const HireCleaners: React.FC = () => {
                     required
                     min={new Date().toISOString().split('T')[0]}
                     value={formData.service_date}
-                    onChange={handleInputChange}
+                    onChange={(e) => onDateChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                   />
+                  {dateError && <p className="text-sm text-red-600 mt-1">{dateError}</p>}
                 </div>
 
                 <div>
@@ -190,9 +297,10 @@ const HireCleaners: React.FC = () => {
                     name="service_time"
                     required
                     value={formData.service_time}
-                    onChange={handleInputChange}
+                    onChange={(e) => onTimeChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                   />
+                  {timeError && <p className="text-sm text-red-600 mt-1">{timeError}</p>}
                 </div>
 
                 {/* Contact Information */}

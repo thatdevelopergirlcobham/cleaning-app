@@ -42,6 +42,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const getInitialSession = async () => {
       try {
+        // Enforce custom 3-hour expiry if present
+        const expiryRaw = typeof window !== 'undefined' ? localStorage.getItem('app_auth_expiry') : null
+        const now = Date.now()
+        if (expiryRaw && Number(expiryRaw) && now > Number(expiryRaw)) {
+          await supabase.auth.signOut()
+          try { localStorage.removeItem('app_auth_expiry') } catch { /* noop */ }
+        }
+
         const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         setUser(session?.user ?? null)
@@ -67,10 +75,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(session?.user ?? null)
 
         if (session?.user) {
+          // Refresh the custom 3-hour expiry on sign-in events
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            try { localStorage.setItem('app_auth_expiry', String(Date.now() + 3 * 60 * 60 * 1000)) } catch { /* noop */ }
+          }
           await loadUserProfile(session.user.id)
         } else {
           setProfile(null)
           setLoading(false)
+          try { localStorage.removeItem('app_auth_expiry') } catch { /* noop */ }
         }
       }
     )

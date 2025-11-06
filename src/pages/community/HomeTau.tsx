@@ -65,6 +65,7 @@ const HomeTau: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const { user } = useAuth();
   const { createReport } = useUserReports(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -87,8 +88,7 @@ const HomeTau: React.FC = () => {
   }, []);
 
   /** 🔄 Fetch all reports from Supabase */
-  useEffect(() => {
-    const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
       setIsLoading(true);
       setError(null);
 
@@ -117,10 +117,11 @@ const HomeTau: React.FC = () => {
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchReports();
   }, [processLocation]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports, reloadTick]);
 
   /** 🔍 Apply filters, search, and sorting */
   useEffect(() => {
@@ -194,10 +195,17 @@ const HomeTau: React.FC = () => {
 
       {/* 🧾 Reports Section */}
       <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Recent Waste Issues (Tau)</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+          <h2 className="text-2xl font-bold text-gray-800">Recent Waste Issues</h2>
 
-          <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0 items-stretch sm:items-center">
+            <button
+              onClick={() => setReloadTick(t => t + 1)}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-700"
+              title="Refresh"
+            >
+              Refresh
+            </button>
             <input
               type="text"
               placeholder="Search reports..."

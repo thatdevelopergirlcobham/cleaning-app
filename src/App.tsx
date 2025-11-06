@@ -37,6 +37,7 @@ import About from './pages/About'
 import NotFound from './pages/NotFound'
 import AnalyticsDashboard from './pages/admin/AnalyticsDashboard'
 import AgentHire from './pages/community/AgentHire'
+import AdminLayout from './components/admin/AdminLayout'
 
 // Redirect component for authenticated users visiting landing page
 const AuthenticatedHomeRedirect: React.FC = () => {
@@ -83,7 +84,9 @@ const Shell: React.FC = () => {
                         path="/admin"
                         element={
                           <ProtectedRoute requireAdmin={true}>
-                            <AdminDashboard />
+                            <AdminLayout>
+                              <AdminDashboard />
+                            </AdminLayout>
                           </ProtectedRoute>
                         }
                       />
@@ -91,7 +94,9 @@ const Shell: React.FC = () => {
                         path="/admin/reports"
                         element={
                           <ProtectedRoute requireAdmin={true}>
-                            <PendingReports />
+                            <AdminLayout>
+                              <PendingReports />
+                            </AdminLayout>
                           </ProtectedRoute>
                         }
                       />
@@ -99,7 +104,9 @@ const Shell: React.FC = () => {
                         path="/admin/agents"
                         element={
                           <ProtectedRoute requireAdmin={true}>
-                            <Agents />
+                            <AdminLayout>
+                              <Agents />
+                            </AdminLayout>
                           </ProtectedRoute>
                         }
                       />
@@ -107,7 +114,9 @@ const Shell: React.FC = () => {
                         path="/admin/analytics"
                         element={
                           <ProtectedRoute requireAdmin={true}>
-                            <AnalyticsDashboard />
+                            <AdminLayout>
+                              <AnalyticsDashboard />
+                            </AdminLayout>
                           </ProtectedRoute>
                         }
                       />
