@@ -23,7 +23,7 @@ const Navbar: React.FC = () => {
   return (
     <nav className="bg-green-900 top-0 z-50 ">
       <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between max-w-6xl">
+        <div className="flex items-center justify-between w-full max-w-6xl mx-auto">
           {/* Logo - Left Side */}
           <div className="text-2xl font-bold text-lime-500 hidden md:block">CleanCal</div>
 
