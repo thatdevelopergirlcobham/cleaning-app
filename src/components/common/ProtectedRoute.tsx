@@ -1,5 +1,4 @@
 import React from 'react'
-// import type { UserProfile } from '../../contexts/AuthContext.types';
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import LoadingSpinner from './LoadingSpinner'
@@ -18,49 +17,35 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
-  // Shortened loading time for authentication check
-  const [showLoading, setShowLoading] = React.useState(loading);
-
-  React.useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setShowLoading(false);
-      }, 1000); // Show loader for max 1 second
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
-
-  if (loading && showLoading) {
+  // Show a clean loading state while auth/profile are resolving
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <LoadingSpinner />
       </div>
-    );
+    )
   }
 
-  const isDevAdmin = typeof window !== 'undefined' && !!localStorage.getItem('dev_admin_logged_in')
-
+  // If no authenticated user, send to auth with return url
   if (!user) {
-    // Allow developer admin access when dev flag is set and route requires admin
-    if (requireAdmin && isDevAdmin) {
-      // allow through (no user profile available but flagged as dev admin)
-    } else {
-      // Redirect to auth page with return url
-      return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />
-    }
+    const redirect = encodeURIComponent(location.pathname + location.search)
+    return <Navigate to={`/auth?redirect=${redirect}`} replace />
   }
 
-  // Check role-based access and admin email
+  // Developer admin/testing override
+  const isDevAdmin = typeof window !== 'undefined' && !!localStorage.getItem('dev_admin_logged_in')
+  const isEnvAdminEmail = user.email === import.meta.env.VITE_TEST_ADMIN_EMAIL
+
+  // Admin-only routes
   if (requireAdmin) {
-    const isDevAdmin = typeof window !== 'undefined' && !!localStorage.getItem('dev_admin_logged_in')
-    const isEnvAdminEmail = user?.email === import.meta.env.VITE_TEST_ADMIN_EMAIL
-    if (profile?.role !== 'admin' && !isEnvAdminEmail && !isDevAdmin) {
-      return <Navigate to="/unauthorized" replace />
-    }
+    const isAdmin = profile?.role === 'admin' || isEnvAdminEmail || isDevAdmin
+    if (!isAdmin) return <Navigate to="/404" replace />
   }
 
-  if (requireAgent && profile?.role !== 'agent' && profile?.role !== 'admin') {
-    return <Navigate to="/unauthorized" replace />
+  // Agent routes (admin also allowed)
+  if (requireAgent) {
+    const isAgentOrAdmin = profile?.role === 'agent' || profile?.role === 'admin'
+    if (!isAgentOrAdmin) return <Navigate to="/404" replace />
   }
 
   return <>{children}</>

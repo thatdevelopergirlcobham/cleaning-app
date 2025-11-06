@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import { AuthProvider } from './contexts/AuthContext'
 import { UIProvider } from './contexts/UIContext'
@@ -18,7 +18,6 @@ import UserReportsManager from './components/community/UserReportsManager'
 
 // Community Pages
 import HomeTau from './pages/community/HomeTau'
-import ReportNew from './pages/community/ReportNew'
 // import Events from './pages/community/Events'
 // import AgentHire from './pages/community/AgentHire'
 import Logout from './pages/auth/Logout'
@@ -45,18 +44,14 @@ const AuthenticatedHomeRedirect: React.FC = () => {
   return user ? <Navigate to="/home" replace /> : <LandingPage />
 }
 
-function App() {
+const Shell: React.FC = () => {
+  const location = useLocation()
+  const isAdminRoute = location.pathname.startsWith('/admin')
   return (
-    <Router>
-      <AuthProvider>
-        <UIProvider>
-          <ToastProvider>
-            <NotificationProvider value={null}>
-              <AIProvider>
-                <div className="min-h-screen bg-gray-50">
-                  <Navbar />
-                  <main className="pb-16 md:pb-0">
-                    <Routes>
+    <div className="min-h-screen bg-gray-50">
+      {!isAdminRoute && <Navbar />}
+      <main className="pb-16 md:pb-0">
+        <Routes>
                       {/* Public Routes */}
                       <Route path="/" element={<AuthenticatedHomeRedirect />} />
                       
@@ -68,7 +63,6 @@ function App() {
                       <Route path="/home" element={<HomeTau />} />
 
                       {/* Community Routes */}
-                      <Route path="/report" element={<ReportNew />} />
                       <Route path="/reports/:id" element={<ReportDetailPage />} />
                       <Route path="/reports-map" element={<MapView />} />
                       <Route path="/my-reports" element={<UserReportsManager />} />
@@ -77,9 +71,9 @@ function App() {
                       <Route
                         path="/profile"
                         element={
-                          // <ProtectedRoute>
+                          <ProtectedRoute>
                             <Profile />
-                          // </ProtectedRoute>
+                          </ProtectedRoute>
                         }
                       />
 
@@ -121,13 +115,25 @@ function App() {
                       {/* Fallback Routes */}
                       <Route path="/404" element={<NotFound />} />
                       <Route path="*" element={<Navigate to="/404" replace />} />
-                    </Routes>
-                  </main>
+        </Routes>
+      </main>
 
-                  <MobileBottomNav />
-                  <Toaster />
-                  <AIChatBot />
-                </div>
+      {!isAdminRoute && <MobileBottomNav />}
+      <Toaster />
+      <AIChatBot />
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <UIProvider>
+          <ToastProvider>
+            <NotificationProvider value={null}>
+              <AIProvider>
+                <Shell />
               </AIProvider>
             </NotificationProvider>
           </ToastProvider>

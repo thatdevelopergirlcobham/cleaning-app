@@ -37,7 +37,7 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceTimer = useRef<NodeJS.Timeout>()
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /**
    * Fetch location suggestions from Nominatim API
@@ -95,7 +95,7 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
     }
 
     // Set new timer for debounced search
-    debounceTimer.current = setTimeout(() => {
+    debounceTimer.current = window.setTimeout(() => {
       fetchSuggestions(newValue)
     }, 500) // Wait 500ms after user stops typing
   }
