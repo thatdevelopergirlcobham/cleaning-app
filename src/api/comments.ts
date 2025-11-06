@@ -56,6 +56,24 @@ export const commentsApi = {
     if (error) throw error
   },
 
+  async updateComment(commentId: string, content: string): Promise<CommentWithUser> {
+    const { data, error } = await supabase
+      .from('report_comments')
+      .update({ content })
+      .eq('id', commentId)
+      .select(`
+        *,
+        user_profiles (
+          full_name,
+          avatar_url
+        )
+      `)
+      .single()
+
+    if (error) throw error
+    return data as CommentWithUser
+  },
+
   subscribeToComments(reportId: string, callback: (payload: CommentWithUser) => void) {
     return supabase
       .channel(`report_comments:${reportId}`)

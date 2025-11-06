@@ -124,6 +124,15 @@ export const updateReport = async (id: string, updates: Partial<ReportUpdate>): 
   return data
 }
 
+export const deleteReport = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('reports')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
 export const subscribeToReports = (
   callback: (payload: {
     eventType: 'INSERT' | 'UPDATE' | 'DELETE' | '*'

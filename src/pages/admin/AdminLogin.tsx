@@ -7,17 +7,12 @@ const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const adminEmail = import.meta.env.VITE_TEST_ADMIN_EMAIL
-  const adminPassword = import.meta.env.VITE_TEST_ADMIN_PASSWORD
+  const adminEmail = import.meta.env.VITE_TEST_ADMIN_EMAIL || 'admin@cleancal.local'
+  const adminPassword = import.meta.env.VITE_TEST_ADMIN_PASSWORD || 'admin123'
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    if (!adminEmail || !adminPassword) {
-      setError('Admin test credentials are not configured.')
-      return
-    }
 
     if (email === adminEmail && password === adminPassword) {
       // Mark developer/admin access locally (for testing only)

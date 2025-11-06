@@ -33,10 +33,12 @@ const ReportDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Comments
-  const { comments, loading: commentsLoading, addComment } = useComments(id || '');
+  const { comments, loading: commentsLoading, addComment, deleteComment, updateComment } = useComments(id || '');
   const [newComment, setNewComment] = useState('');
   const [commentError, setCommentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -52,7 +54,7 @@ const ReportDetailPage: React.FC = () => {
 
         if (fetchError) throw fetchError;
 
-        console.log('📦 Full JSON response:', data); // ✅ show full JSON response in console
+        console.log(' Full JSON response:', data); // show full JSON response in console
 
         setReport(data as ReportWithProfile);
 
@@ -70,7 +72,7 @@ const ReportDetailPage: React.FC = () => {
         }
 
       } catch (err) {
-        console.error('❌ Error fetching report:', err);
+        console.error(' Error fetching report:', err);
         setError((err as Error).message);
       } finally {
         setLoading(false);
@@ -93,7 +95,7 @@ const ReportDetailPage: React.FC = () => {
       });
       setNewComment('');
     } catch (err) {
-      console.error('❌ Comment submit error:', err);
+      console.error(' Comment submit error:', err);
       setCommentError('Failed to submit comment');
     } finally {
       setSubmitting(false);
@@ -157,11 +159,66 @@ const ReportDetailPage: React.FC = () => {
               ) : (
                 comments.map(c => (
                   <div key={c.id} className="border rounded-md p-3 bg-gray-50">
-                    <div className="text-sm font-semibold text-gray-700">
-                      {c.user_profiles?.full_name || (c.is_anonymous ? 'Anonymous' : 'User')}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-700">
+                          {c.user_profiles?.full_name || (c.is_anonymous ? 'Anonymous' : 'User')}
+                          {c.user_id === user?.id ? ' (You)' : ''}
+                        </div>
+                        <div className="text-xs text-gray-400 mb-1">{format(c.created_at, 'PPp')}</div>
+                      </div>
+                      {user && c.user_id === user.id && (
+                        <div className="flex items-center gap-2">
+                          {editingCommentId === c.id ? (
+                            <>
+                              <button
+                                className="text-green-700 text-xs font-medium"
+                                onClick={async () => {
+                                  if (!editingContent.trim()) return;
+                                  await updateComment(c.id, editingContent.trim());
+                                  setEditingCommentId(null);
+                                  setEditingContent('');
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="text-gray-500 text-xs"
+                                onClick={() => { setEditingCommentId(null); setEditingContent(''); }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="text-blue-700 text-xs font-medium"
+                                onClick={() => { setEditingCommentId(c.id); setEditingContent(c.content); }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="text-red-700 text-xs font-medium"
+                                onClick={async () => { if (confirm('Delete this comment?')) await deleteComment(c.id); }}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs text-gray-400 mb-1">{format(c.created_at, 'PPp')}</div>
-                    <div className="text-gray-800 text-sm">{c.content}</div>
+
+                    {editingCommentId === c.id ? (
+                      <textarea
+                        className="mt-2 w-full border border-gray-300 rounded-md p-2 text-sm"
+                        rows={3}
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-gray-800 text-sm mt-1">{c.content}</div>
+                    )}
                   </div>
                 ))
               )}

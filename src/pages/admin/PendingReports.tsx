@@ -1,17 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import {
-  // FileText,
-  CheckCircle,
-  XCircle,
-  Eye,
-  MapPin,
-  Calendar,
-  User,
-  // Search,
-} from 'lucide-react'
+// removed unused lucide-react icon imports
+
 import { useToast } from '../../hooks/useToast'
-import { getReports, updateReport, type ReportWithProfile } from '../../api/reports'
+import { getReports, updateReport, deleteReport, type ReportWithProfile } from '../../api/reports'
+
 import { aiApi } from '../../api/ai'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Modal from '../../components/common/Modal'
@@ -34,9 +27,8 @@ const PendingReports: React.FC = () => {
     try {
       setLoading(true)
       const allReports = await getReports()
-      const pendingReports = allReports.filter(r => r.status === 'pending')
-      setReports(pendingReports)
-      setFilteredReports(pendingReports)
+      setReports(allReports)
+      setFilteredReports(allReports)
     } catch (error) {
       console.error('Error fetching reports:', error)
       addToast({
@@ -92,25 +84,32 @@ const PendingReports: React.FC = () => {
     filterReports()
   }, [filterReports])
 
-  const handleApprove = async (reportId: string) => {
+  const handleStatusChange = async (
+    reportId: string,
+    status: 'pending' | 'approved' | 'rejected' | 'resolved'
+  ) => {
     try {
-      await updateReport(reportId, { status: 'approved' })
-      addToast({ type: 'success', title: 'Approved', message: 'Report approved successfully.' })
+      await updateReport(reportId, { status })
+      addToast({ type: 'success', title: 'Updated', message: `Status set to ${status}.` })
       fetchReports()
     } catch {
-      addToast({ type: 'error', title: 'Error', message: 'Failed to approve report.' })
+      addToast({ type: 'error', title: 'Error', message: 'Failed to update status.' })
     }
   }
 
-  const handleReject = async (reportId: string) => {
+  const handleDelete = async (reportId: string) => {
     try {
-      await updateReport(reportId, { status: 'rejected' })
-      addToast({ type: 'warning', title: 'Rejected', message: 'Report rejected.' })
-      fetchReports()
+      if (!confirm('Delete this report? This action cannot be undone.')) return
+      await deleteReport(reportId)
+      addToast({ type: 'success', title: 'Deleted', message: 'Report deleted.' })
+      setReports(prev => prev.filter(r => r.id !== reportId))
+      setFilteredReports(prev => prev.filter(r => r.id !== reportId))
     } catch {
-      addToast({ type: 'error', title: 'Error', message: 'Failed to reject report.' })
+      addToast({ type: 'error', title: 'Error', message: 'Failed to delete report.' })
     }
   }
+
+  // Single-action helpers can be added if needed (approve/reject/etc.)
 
   const handleSelectAll = () => {
     setSelectedReports(prev => {
@@ -125,16 +124,6 @@ const PendingReports: React.FC = () => {
     loadAIInsights(report)
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'text-green-600'
-      case 'rejected':
-        return 'text-red-600'
-      default:
-        return 'text-yellow-600'
-    }
-  }
 
   if (loading) return <LoadingSpinner />
 
@@ -201,20 +190,51 @@ const PendingReports: React.FC = () => {
                     }
                   />
                 </td>
-                <td className="p-2 font-medium">{report.title}</td>
-                <td className="p-2">{report.user_profiles && report.user_profiles.full_name ? report.user_profiles.full_name : 'N/A'}</td>
-                <td className="p-2 flex items-center gap-1">
-                  <MapPin size={16} />
+                <td className="p-2 max-w-xs">
+                  <div className="font-medium line-clamp-1">{report.title}</div>
+                  <div className="text-xs text-gray-500 line-clamp-2">{report.description}</div>
+                </td>
+                <td className="p-2">
+                  {report.user_profiles && report.user_profiles.full_name ? report.user_profiles.full_name : 'N/A'}
+                </td>
+                <td className="p-2">
                   {typeof report.location === 'object' && report.location !== null
                     ? `${report.location.lat.toFixed(4)}, ${report.location.lng.toFixed(4)}`
-                    : report.location || 'N/A'}
+                    : (report.location || 'N/A')}
                 </td>
-                <td className="p-2 flex items-center gap-1"><Calendar size={16} />{new Date(report.created_at).toLocaleDateString()}</td>
-                <td className={`p-2 ${getStatusColor(report.status)}`}>{report.status}</td>
-                <td className="p-2 text-right flex gap-2 justify-end">
-                  <button onClick={() => handleApprove(report.id)} className="text-green-600 hover:text-green-800"><CheckCircle size={20} /></button>
-                  <button onClick={() => handleReject(report.id)} className="text-red-600 hover:text-red-800"><XCircle size={20} /></button>
-                  <button onClick={() => handleViewReport(report)} className="text-blue-600 hover:text-blue-800"><Eye size={20} /></button>
+                <td className="p-2 whitespace-nowrap">{new Date(report.created_at).toLocaleString()}</td>
+                <td className="p-2">
+                  <select
+                    value={report.status}
+                    onChange={(e) =>
+                      handleStatusChange(
+                        report.id,
+                        e.target.value as 'pending' | 'approved' | 'rejected' | 'resolved'
+                      )
+                    }
+                    className="text-sm border rounded px-2 py-1"
+                  >
+                    <option value="pending">pending</option>
+                    <option value="approved">approved</option>
+                    <option value="rejected">rejected</option>
+                    <option value="resolved">resolved</option>
+                  </select>
+                </td>
+                <td className="p-2 text-right">
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => handleViewReport(report)}
+                      className="px-2 py-1 text-sm border rounded"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleDelete(report.id)}
+                      className="px-2 py-1 text-sm bg-red-600 text-white rounded"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </motion.tr>
             ))}
@@ -230,9 +250,8 @@ const PendingReports: React.FC = () => {
         >
           <h2 className="text-xl font-semibold mb-2">{selectedReport.title}</h2>
           <p className="text-gray-700 mb-2">{selectedReport.description}</p>
-          <p className="text-gray-600 flex items-center gap-1 mb-1"><User size={16} /> {selectedReport.user_profiles && selectedReport.user_profiles.full_name ? selectedReport.user_profiles.full_name : 'N/A'}</p>
+          <p className="text-gray-600 flex items-center gap-1 mb-1">{selectedReport.user_profiles && selectedReport.user_profiles.full_name ? selectedReport.user_profiles.full_name : 'N/A'}</p>
           <p className="text-gray-600 flex items-center gap-1 mb-1">
-            <MapPin size={16} />
             {typeof selectedReport.location === 'object' && selectedReport.location !== null
               ? `${selectedReport.location.lat.toFixed(4)}, ${selectedReport.location.lng.toFixed(4)}`
               : selectedReport.location || 'N/A'}

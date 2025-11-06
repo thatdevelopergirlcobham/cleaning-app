@@ -104,11 +104,36 @@ export const useComments = (reportId: string) => {
     }
   }, [user, addToast]);
 
+  // Update comment
+  const updateComment = useCallback(async (commentId: string, content: string) => {
+    if (!user) return;
+
+    try {
+      const updated = await commentsApi.updateComment(commentId, content);
+      setComments(prev => prev.map(c => (c.id === commentId ? updated : c)));
+
+      addToast({
+        type: 'success',
+        title: 'Updated',
+        message: 'Comment updated successfully'
+      });
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to update comment'
+      });
+      throw error;
+    }
+  }, [user, addToast]);
+
   return {
     comments,
     loading,
     addComment,
     deleteComment,
+    updateComment,
     refreshComments: fetchComments
   };
 };
