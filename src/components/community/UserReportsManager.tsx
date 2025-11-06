@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useUserReports } from '../../hooks/useUserReports'
 import { type CreateReportInput } from '../../api/userReportsService'
-import LocationAutocomplete from '../common/LocationAutocomplete'
+import ReportModal from './ReportModal'
 
 /**
  * Example component demonstrating CRUD operations for user reports
@@ -18,8 +18,10 @@ const UserReportsManager: React.FC = () => {
     counts
   } = useUserReports()
 
-  const [isCreating, setIsCreating] = useState(false)
+  // removed inline create/edit form; using modal instead
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
   const [formData, setFormData] = useState<CreateReportInput>({
     title: '',
     description: '',
@@ -32,64 +34,51 @@ const UserReportsManager: React.FC = () => {
   /**
    * Handle form input changes
    */
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }))
-  }
+  // inline form handlers removed; modal manages its own form state
 
   /**
    * Handle create report
    */
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const result = await createReport(formData)
-    
-    if (result) {
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        category: '',
-        priority: 'low',
-        severity: 'low',
-        is_anonymous: false
-      })
-      setIsCreating(false)
-      alert('Report created successfully!')
-    }
+  const openCreateModal = () => {
+    setModalMode('create')
+    setEditingId(null)
+    setModalOpen(true)
   }
 
   /**
    * Handle update report
    */
-  const handleUpdate = async (id: string) => {
-    const result = await updateReport(id, {
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      priority: formData.priority,
-      severity: formData.severity
-    })
-    
-    if (result) {
-      setEditingId(null)
-      setFormData({
-        title: '',
-        description: '',
-        category: '',
-        priority: 'low',
+  const handleModalSubmit = async (data: {
+    title: string;
+    description: string;
+    category: string;
+    priority: string;
+    image_url: string;
+    location: { lat: number; lng: number; address?: string } | string;
+  }) => {
+    if (modalMode === 'create') {
+      await createReport({
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        priority: (data.priority as any) || 'low',
         severity: 'low',
-        is_anonymous: false
+        image_url: data.image_url,
+        location: typeof data.location === 'string' ? undefined : data.location,
+        is_anonymous: false,
       })
-      alert('Report updated successfully!')
+    } else if (modalMode === 'edit' && editingId) {
+      await updateReport(editingId, {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        priority: (data.priority as any) || 'low',
+        image_url: data.image_url,
+        location: typeof data.location === 'string' ? undefined : data.location,
+      })
+      setEditingId(null)
     }
+    setModalOpen(false)
   }
 
   /**
@@ -110,14 +99,18 @@ const UserReportsManager: React.FC = () => {
    */
   const startEdit = (report: any) => {
     setEditingId(report.id)
+    setModalMode('edit')
     setFormData({
       title: report.title,
       description: report.description,
       category: report.category || '',
       priority: report.priority || 'low',
       severity: report.severity || 'low',
+      image_url: report.image_url,
+      location: report.location,
       is_anonymous: report.is_anonymous || false
     })
+    setModalOpen(true)
   }
 
   if (loading && reports.length === 0) {
@@ -159,10 +152,10 @@ const UserReportsManager: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setIsCreating(!isCreating)}
+            onClick={openCreateModal}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
           >
-            {isCreating ? 'Cancel' : 'Create New Report'}
+            Create New Report
           </button>
         </div>
 
@@ -173,144 +166,22 @@ const UserReportsManager: React.FC = () => {
           </div>
         )}
 
-        {/* Create/Edit Form */}
-        {(isCreating || editingId) && (
-          <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-4">
-              {editingId ? 'Edit Report' : 'Create New Report'}
-            </h2>
-            
-            <form onSubmit={editingId ? (e) => { e.preventDefault(); handleUpdate(editingId); } : handleCreate}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-2">Title *</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Report title"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-2">Description *</label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    required
-                    rows={4}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Describe the issue..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Category</label>
-                  <input
-                    type="text"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., Waste, Infrastructure"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Priority</label>
-                  <select
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Severity</label>
-                  <select
-                    name="severity"
-                    value={formData.severity}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-2">Location</label>
-                  <LocationAutocomplete
-                    value={formData.location?.address || ''}
-                    onChange={(location) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        location: {
-                          lat: location.lat,
-                          lng: location.lng,
-                          address: location.address
-                        }
-                      }))
-                    }}
-                    placeholder="Search for location (e.g., Atiwa, Calabar, Lagos)"
-                  />
-                  {formData.location && (
-                    <div className="mt-2 text-xs text-gray-600">
-                      📍 Selected: {formData.location.address}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="is_anonymous"
-                    checked={formData.is_anonymous}
-                    onChange={handleInputChange}
-                    className="mr-2"
-                  />
-                  <label className="text-sm font-medium">Post Anonymously</label>
-                </div>
-              </div>
-
-              <div className="flex gap-4 mt-6">
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-                >
-                  {editingId ? 'Update Report' : 'Create Report'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreating(false)
-                    setEditingId(null)
-                    setFormData({
-                      title: '',
-                      description: '',
-                      category: '',
-                      priority: 'low',
-                      severity: 'low',
-                      is_anonymous: false
-                    })
-                  }}
-                  className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
+        {/* Create/Edit Modal */}
+        {modalOpen && (
+          <ReportModal
+            isOpen={modalOpen}
+            onClose={() => { setModalOpen(false); setEditingId(null); }}
+            mode={modalMode}
+            initialData={editingId ? {
+              title: formData.title,
+              description: formData.description,
+              category: formData.category,
+              priority: formData.priority,
+              image_url: (formData as any).image_url,
+              location: formData.location as any
+            } : undefined}
+            onSubmit={handleModalSubmit}
+          />
         )}
 
         {/* Reports List */}

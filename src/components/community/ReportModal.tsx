@@ -3,45 +3,50 @@ import React, { useState, useRef } from "react";
 import { FiX, FiMapPin, FiUpload, FiLoader, FiCrosshair } from "react-icons/fi";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import LocationAutocomplete from "../common/LocationAutocomplete";
 
 const CLOUDINARY_ENDPOINT = "https://clean-cal-api.vercel.app/upload";
-const SUPABASE_URL = "https://hajgpcqbfougojrpaprr.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY";
 
 
 type ReportModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  mode?: 'create' | 'edit';
+  initialData?: {
+    title?: string;
+    description?: string;
+    category?: string;
+    priority?: string;
+    image_url?: string;
+    location?: { lat: number; lng: number; address?: string } | string;
+  };
+  onSubmit: (data: {
+    title: string;
+    description: string;
+    category: string;
+    priority: string;
+    image_url: string;
+    location: { lat: number; lng: number; address?: string } | string;
+  }) => Promise<void>;
 };
 
-const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [category, setCategory] = useState("other");
-  const [priority, setPriority] = useState("medium");
-  const [imageUrl, setImageUrl] = useState("");
-  const [previewUrl, setPreviewUrl] = useState("");
+const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, mode = 'create', initialData, onSubmit }) => {
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [category, setCategory] = useState(initialData?.category || "other");
+  const [priority, setPriority] = useState(initialData?.priority || "medium");
+  const [imageUrl, setImageUrl] = useState(initialData?.image_url || "");
+  const [previewUrl, setPreviewUrl] = useState(initialData?.image_url || "");
+  const [locationObj, setLocationObj] = useState<{ lat: number; lng: number; address?: string } | null>(
+    typeof initialData?.location === 'object' && initialData?.location ? initialData.location as any : null
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!isOpen) return null;
 
-  function generateUUID(): string {
-    if (typeof crypto !== "undefined" && crypto.randomUUID)
-      return crypto.randomUUID();
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(
-      16,
-      20
-    )}-${hex.slice(20)}`;
-  }
+  // submit is delegated to parent via onSubmit
 
   async function uploadImage(file: File) {
     if (!file) return;
@@ -98,10 +103,10 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
           );
           const data = await response.json();
           const addr = data.display_name || `${lat}, ${lng}`;
-          setLocation(addr);
+          setLocationObj({ lat, lng, address: addr });
           toast.success("Location fetched successfully");
         } catch {
-          setLocation(`${lat}, ${lng}`);
+          setLocationObj({ lat, lng });
           toast.info("Using coordinates as location");
         }
       },
@@ -117,38 +122,21 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
 
     try {
       setIsSubmitting(true);
-
-      const payload = {
+      await onSubmit({
         title,
         description,
-        image_url: imageUrl,
-        user_id: generateUUID(),
-        status: "pending",
         category,
         priority,
-        location,
-      };
-
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/reports`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: "Bearer " + SUPABASE_ANON_KEY,
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify(payload),
+        image_url: imageUrl,
+        location: locationObj || "",
       });
-
-      const text = await res.text();
-      if (!res.ok) throw new Error(text);
-      toast.success("Report submitted successfully");
+      toast.success(mode === 'edit' ? "Report updated successfully" : "Report submitted successfully");
 
       setTitle("");
       setDescription("");
       setImageUrl("");
       setPreviewUrl("");
-      setLocation("");
+      setLocationObj(null);
       setCategory("other");
       setPriority("medium");
       if (fileInputRef.current) {
@@ -157,7 +145,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
       onClose();
     } catch (err) {
       const error = err as Error;
-      toast.error("Submission failed: " + error.message);
+      toast.error((mode === 'edit' ? "Update failed: " : "Submission failed: ") + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -168,7 +156,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
       <div className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
         <div className="p-6 overflow-y-auto flex-1">
           <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b">
-            <h2 className="text-2xl font-bold text-gray-900">Create Report</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{mode === 'edit' ? 'Edit Report' : 'Create Report'}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 transition-colors p-1 -mr-2"
@@ -214,13 +202,13 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
               <div className="flex items-center gap-2">
                 <div className="relative flex-grow">
                   <FiMapPin className="absolute left-3 top-3 text-gray-400" />
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Enter or fetch location"
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
+                  <div className="pl-10">
+                    <LocationAutocomplete
+                      value={locationObj?.address || ''}
+                      onChange={(loc) => setLocationObj({ lat: loc.lat, lng: loc.lng, address: loc.address })}
+                      placeholder="Enter or search location"
+                    />
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -302,7 +290,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose }) => {
                 </>
               ) : (
                 <>
-                  <FiUpload /> Submit Report
+                  <FiUpload /> {mode === 'edit' ? 'Save Changes' : 'Submit Report'}
                 </>
               )}
             </button>
