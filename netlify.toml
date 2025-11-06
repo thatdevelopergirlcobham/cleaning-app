@@ -14,16 +14,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
-  force = true
-
-[[redirects]]
-  # Convenience redirect: if someone visits /admin directly, send them to the
-  # admin login route handled by the client app. This is a temporary convenience
-  # and can be removed if you prefer the SPA fallback to handle it.
-  from = "/admin"
-  to = "/admin/login"
-  status = 302
-  force = false
+  # IMPORTANT: do NOT force, so static assets are served correctly
 
 # Add any additional redirects below. Example:
 # [[redirects]]
