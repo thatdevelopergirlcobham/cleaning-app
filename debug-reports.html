@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug User Reports</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug User Reports</h1>
+    
+    <div class="container">
+        <h2>🔑 Authentication</h2>
+        
+        <!-- Login Form -->
+        <div id="loginForm" style="display: none;">
+            <h3>📧 Login to Debug</h3>
+            <form id="loginFormElement" onsubmit="handleLogin(event)">
+                <div style="margin-bottom: 15px;">
+                    <label for="email" style="display: block; margin-bottom: 5px; font-weight: bold;">Email:</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        required 
+                        placeholder="your@email.com"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
+                    >
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="password" style="display: block; margin-bottom: 5px; font-weight: bold;">Password:</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        required 
+                        placeholder="••••••••"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
+                    >
+                </div>
+                <button type="submit" style="background: #28a745; margin-right: 10px;">
+                    🔓 Login
+                </button>
+                <button type="button" onclick="handleLogout()" style="background: #dc3545;">
+                    🚪 Logout
+                </button>
+            </form>
+        </div>
+
+        <!-- Create User Form -->
+        <div id="createUserForm" style="display: none;">
+            <h3>👶 Create Test User</h3>
+            <form id="createUserFormElement" onsubmit="handleCreateUser(event)">
+                <div style="margin-bottom: 15px;">
+                    <label for="newEmail" style="display: block; margin-bottom: 5px; font-weight: bold;">Email:</label>
+                    <input 
+                        type="email" 
+                        id="newEmail" 
+                        required 
+                        placeholder="test@example.com"
+                        value="test@example.com"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
+                    >
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="newPassword" style="display: block; margin-bottom: 5px; font-weight: bold;">Password:</label>
+                    <input 
+                        type="password" 
+                        id="newPassword" 
+                        required 
+                        placeholder="password123"
+                        value="password123"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
+                    >
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="newName" style="display: block; margin-bottom: 5px; font-weight: bold;">Full Name:</label>
+                    <input 
+                        type="text" 
+                        id="newName" 
+                        required 
+                        placeholder="Test User"
+                        value="Test User"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;"
+                    >
+                </div>
+                <button type="submit" style="background: #28a745; margin-right: 10px;">
+                    👶 Create User
+                </button>
+                <button type="button" onclick="hideCreateUserForm()" style="background: #6c757d;">
+                    ❌ Cancel
+                </button>
+            </form>
+        </div>
+
+        <!-- Auth Status -->
+        <div id="authStatus">
+            <div class="status info">
+                <span class="loading"></span>Checking authentication...
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="container">
+            <h2>👤 User Profile</h2>
+            <div id="userProfile">
+                <div class="status info">Loading user profile...</div>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>📊 Reports Summary</h2>
+            <div id="reportsSummary">
+                <div class="status info">Loading reports summary...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📝 All User Reports (JSON)</h2>
+        <button onclick="fetchReports()">🔄 Refresh Reports</button>
+        <button onclick="testDirectQuery()">🔍 Test Direct Query</button>
+        <button onclick="testFunctionCall()">⚙️ Test Function Call</button>
+        <button onclick="createUserProfile()">👤 Create User Profile</button>
+        <button onclick="showCreateUserForm()">👶 Create Test User</button>
+        <button onclick="checkAuth()" style="background: #6c757d;">🔐 Check Auth Status</button>
+        <div id="reportsData">
+            <div class="status info">Click "Refresh Reports" to load data...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🐛 Debug Information</h2>
+        <div id="debugInfo">
+            <div class="status info">Debug info will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://hajgpcqbfougojrpaprr.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        let currentUser = null;
+        let userProfile = null;
+
+        // Handle login
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                document.getElementById('authStatus').innerHTML = '<div class="status info"><span class="loading"></span>Logging in...</div>';
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Clear form
+                document.getElementById('loginFormElement').reset();
+                
+                // Update auth status
+                await checkAuth();
+                
+                // If login successful, fetch user data
+                if (currentUser) {
+                    await fetchUserProfile();
+                    await fetchReports();
+                }
+                
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status error">
+                        ❌ Login failed: ${error.message}<br>
+                        Please check your email and password and try again.
+                    </div>
+                `;
+                console.error('Login error:', error);
+            }
+        }
+
+        // Handle logout
+        async function handleLogout() {
+            try {
+                // Clear local session first
+                currentUser = null;
+                userProfile = null;
+                
+                // Clear all sections immediately
+                document.getElementById('userProfile').innerHTML = '<div class="status info">User profile will appear here...</div>';
+                document.getElementById('reportsSummary').innerHTML = '<div class="status info">Reports summary will appear here...</div>';
+                document.getElementById('reportsData').innerHTML = '<div class="status info">Reports data will appear here...</div>';
+                document.getElementById('debugInfo').innerHTML = '<div class="status info">Debug info will appear here...</div>';
+                
+                // Show logging out message
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status info">
+                        🔄 Logging out...
+                    </div>
+                `;
+                
+                // Sign out from Supabase
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Wait a moment for session to clear
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Update auth status to show login form
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status success">
+                        ✅ Successfully logged out! You can login again below.
+                    </div>
+                `;
+                
+                // Clear login form
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+                
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status error">
+                        ❌ Logout error: ${error.message}
+                    </div>
+                `;
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Initialize page
+        async function init() {
+            await checkAuth();
+            if (currentUser) {
+                await fetchUserProfile();
+                await fetchReports();
+            }
+        }
+
+        // Check authentication
+        async function checkAuth() {
+            try {
+                // First try to get session (more reliable than getUser)
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    throw sessionError;
+                }
+
+                if (!session || !session.user) {
+                    // Show login form
+                    document.getElementById('loginForm').style.display = 'block';
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="status warning">
+                            ⚠️ No user authenticated. Please login below to debug your reports.
+                        </div>
+                    `;
+                    currentUser = null;
+                    return;
+                }
+
+                // User is authenticated
+                currentUser = session.user;
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status success">
+                        ✅ User authenticated: <strong>${session.user.email}</strong><br>
+                        🆔 User ID: <code>${session.user.id}</code><br>
+                        📅 Last sign in: ${new Date(session.user.last_sign_in_at).toLocaleString()}<br>
+                        <button onclick="handleLogout()" style="background: #dc3545; margin-top: 10px;">
+                            🚪 Logout
+                        </button>
+                    </div>
+                `;
+                
+            } catch (error) {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status error">
+                        ❌ Auth error: ${error.message}
+                    </div>
+                `;
+                currentUser = null;
+                console.error('Auth error:', error);
+            }
+        }
+
+        // Fetch user profile
+        async function fetchUserProfile() {
+            try {
+                document.getElementById('userProfile').innerHTML = '<div class="status info"><span class="loading"></span>Loading user profile...</div>';
+
+                // Try to get user profile
+                const { data: profile, error } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                if (error) {
+                    throw error;
+                }
+
+                userProfile = profile;
+                document.getElementById('userProfile').innerHTML = `
+                    <div class="status success">
+                        ✅ User Profile Found:<br>
+                        📧 Email: <strong>${profile.email}</strong><br>
+                        👤 Name: <strong>${profile.full_name}</strong><br>
+                        🎭 Role: <strong>${profile.role}</strong><br>
+                        🆔 Profile ID: <code>${profile.id}</code><br>
+                        📅 Created: ${new Date(profile.created_at).toLocaleString()}
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('userProfile').innerHTML = `
+                    <div class="status error">
+                        ❌ Profile error: ${error.message}<br>
+                        This might mean the user profile doesn't exist in the database.
+                    </div>
+                `;
+                console.error('Profile error:', error);
+            }
+        }
+
+        // Fetch reports using direct table query
+        async function fetchReports() {
+            if (!currentUser) {
+                document.getElementById('reportsData').innerHTML = '<div class="status error">❌ No user authenticated</div>';
+                return;
+            }
+
+            try {
+                document.getElementById('reportsData').innerHTML = '<div class="status info"><span class="loading"></span>Fetching reports...</div>';
+
+                // Method 1: Try user_id first (more likely to work)
+                const { data: reports, error } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .eq('user_id', currentUser.id)  // Using user_id instead of profile_id
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                // Update summary
+                const summary = {
+                    total: reports.length,
+                    pending: reports.filter(r => r.status === 'pending').length,
+                    approved: reports.filter(r => r.status === 'approved').length,
+                    rejected: reports.filter(r => r.status === 'rejected').length,
+                    resolved: reports.filter(r => r.status === 'resolved').length
+                };
+
+                document.getElementById('reportsSummary').innerHTML = `
+                    <div class="status success">
+                        📊 Reports Summary:<br>
+                        📈 Total: <strong>${summary.total}</strong><br>
+                        ⏳ Pending: <strong>${summary.pending}</strong><br>
+                        ✅ Approved: <strong>${summary.approved}</strong><br>
+                        ❌ Rejected: <strong>${summary.rejected}</strong><br>
+                        🎯 Resolved: <strong>${summary.resolved}</strong>
+                    </div>
+                `;
+
+                // Display reports data
+                if (reports.length === 0) {
+                    document.getElementById('reportsData').innerHTML = `
+                        <div class="status warning">
+                            ⚠️ No reports found for this user.<br>
+                            Query used: <code>user_id = '${currentUser.id}'</code>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('reportsData').innerHTML = `
+                        <div class="status success">
+                            ✅ Found ${reports.length} reports using user_id
+                        </div>
+                        <h3>Raw JSON Data:</h3>
+                        <pre>${JSON.stringify(reports, null, 2)}</pre>
+                    `;
+                }
+
+                // Update debug info
+                updateDebugInfo('direct_query_user_id', { reports, error });
+
+            } catch (error) {
+                document.getElementById('reportsData').innerHTML = `
+                    <div class="status error">
+                        ❌ Reports fetch error: ${error.message}<br>
+                        <details>
+                            <summary>Full error details</summary>
+                            <pre>${JSON.stringify(error, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+                console.error('Reports fetch error:', error);
+                updateDebugInfo('direct_query_error', error);
+            }
+        }
+
+        // Test direct query with user_id instead of profile_id
+        async function testDirectQuery() {
+            if (!currentUser) {
+                alert('No user authenticated');
+                return;
+            }
+
+            try {
+                document.getElementById('debugInfo').innerHTML += '<div class="status info"><span class="loading"></span>Testing direct query with user_id...</div>';
+
+                // Try with user_id instead of profile_id
+                const { data: reports, error } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .eq('user_id', currentUser.id)  // Using user_id
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                document.getElementById('debugInfo').innerHTML += `
+                    <div class="status success">
+                        ✅ Direct query with user_id found ${reports.length} reports
+                    </div>
+                    <pre>${JSON.stringify(reports, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                document.getElementById('debugInfo').innerHTML += `
+                    <div class="status error">
+                        ❌ Direct query error: ${error.message}
+                    </div>
+                `;
+                console.error('Direct query error:', error);
+            }
+        }
+
+        // Test function call
+        async function testFunctionCall() {
+            if (!userProfile) {
+                alert('No user profile available');
+                return;
+            }
+
+            try {
+                document.getElementById('debugInfo').innerHTML += '<div class="status info"><span class="loading"></span>Testing function call...</div>';
+
+                // Try using the function we created
+                const { data: reports, error } = await supabase
+                    .rpc('get_user_reports', { user_profile_id: userProfile.id });
+
+                if (error) {
+                    throw error;
+                }
+
+                document.getElementById('debugInfo').innerHTML += `
+                    <div class="status success">
+                        ✅ Function call found ${reports.length} reports
+                    </div>
+                    <pre>${JSON.stringify(reports, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                document.getElementById('debugInfo').innerHTML += `
+                    <div class="status error">
+                        ❌ Function call error: ${error.message}
+                    </div>
+                `;
+                console.error('Function call error:', error);
+            }
+        }
+
+        // Create user profile if missing
+        async function createUserProfile() {
+            if (!currentUser) {
+                alert('No user authenticated');
+                return;
+            }
+
+            try {
+                document.getElementById('debugInfo').innerHTML = '<div class="status info"><span class="loading"></span>Creating user profile...</div>';
+
+                // Create user profile
+                const { data: profile, error } = await supabase
+                    .from('user_profiles')
+                    .insert({
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        full_name: currentUser.email?.split('@')[0] || 'User', // Use email prefix as name
+                        role: 'user'
+                    })
+                    .select()
+                    .single();
+
+                if (error) {
+                    throw error;
+                }
+
+                document.getElementById('debugInfo').innerHTML = `
+                    <div class="status success">
+                        ✅ User profile created successfully!<br>
+                        🆔 Profile ID: <code>${profile.id}</code><br>
+                        📧 Email: <strong>${profile.email}</strong><br>
+                        👤 Name: <strong>${profile.full_name}</strong>
+                    </div>
+                `;
+
+                // Refresh user profile and reports
+                await fetchUserProfile();
+                await fetchReports();
+
+            } catch (error) {
+                document.getElementById('debugInfo').innerHTML = `
+                    <div class="status error">
+                        ❌ Profile creation error: ${error.message}
+                    </div>
+                `;
+                console.error('Profile creation error:', error);
+            }
+        }
+
+        // Show create user form
+        function showCreateUserForm() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('createUserForm').style.display = 'block';
+            document.getElementById('authStatus').innerHTML = '<div class="status info">Creating a new test user...</div>';
+        }
+
+        // Hide create user form
+        function hideCreateUserForm() {
+            document.getElementById('createUserForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            checkAuth();
+        }
+
+        // Handle create user
+        async function handleCreateUser(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('newEmail').value;
+            const password = document.getElementById('newPassword').value;
+            const fullName = document.getElementById('newName').value;
+            
+            try {
+                document.getElementById('authStatus').innerHTML = '<div class="status info"><span class="loading"></span>Creating user...</div>';
+                
+                // Step 1: Create auth user
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: fullName
+                        }
+                    }
+                });
+                
+                if (authError) {
+                    throw authError;
+                }
+                
+                if (!authData.user) {
+                    throw new Error('User creation failed - no user returned');
+                }
+                
+                // Step 2: Create user profile
+                const { error: profileError } = await supabase
+                    .from('user_profiles')
+                    .insert({
+                        id: authData.user.id,
+                        email: email,
+                        full_name: fullName,
+                        role: 'user'
+                    });
+                
+                if (profileError) {
+                    throw profileError;
+                }
+                
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status success">
+                        ✅ User created successfully!<br>
+                        📧 Email: <strong>${email}</strong><br>
+                        👤 Name: <strong>${fullName}</strong><br>
+                        🆔 User ID: <code>${authData.user.id}</code><br>
+                        <br>
+                        <strong>Next steps:</strong><br>
+                        1. Check your email for confirmation (if required)<br>
+                        2. Use the login form below to sign in<br>
+                        3. Then create test reports
+                    </div>
+                `;
+                
+                // Hide create form and show login form
+                document.getElementById('createUserForm').style.display = 'none';
+                document.getElementById('loginForm').style.display = 'block';
+                
+                // Pre-fill login form
+                document.getElementById('email').value = email;
+                document.getElementById('password').value = password;
+                
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status error">
+                        ❌ User creation failed: ${error.message}<br>
+                        <details>
+                            <summary>Full error details</summary>
+                            <pre>${JSON.stringify(error, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+                console.error('User creation error:', error);
+            }
+        }
+
+        // Update debug information
+        function updateDebugInfo(type, data) {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.innerHTML = `
+                <div class="status info">
+                    🔍 Debug Info - ${new Date().toLocaleString()}<br>
+                    <strong>Type:</strong> ${type}<br>
+                    <strong>Current User ID:</strong> <code>${currentUser?.id}</code><br>
+                    <strong>Profile ID:</strong> <code>${userProfile?.id}</code><br>
+                    <strong>Database Query Used:</strong> <code>user_id = '${currentUser?.id}'</code>
+                </div>
+                <h4>Raw Response:</h4>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

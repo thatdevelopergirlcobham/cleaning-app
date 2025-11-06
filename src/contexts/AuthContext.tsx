@@ -17,7 +17,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadUserProfile = useCallback(async (userId: string) => {
     try {
-      const profile = await usersApi.getUserProfile(userId)
+      let profile = await usersApi.getUserProfile(userId)
+      if (!profile) {
+        const { data: authUserRes } = await supabase.auth.getUser()
+        const authUser = authUserRes?.user
+        if (authUser && authUser.id === userId && authUser.email) {
+          profile = await usersApi.createUserProfile({
+            id: authUser.id,
+            email: authUser.email,
+            full_name: (authUser.user_metadata?.full_name as string) ?? null,
+            role: 'user',
+          })
+        }
+      }
       setProfile(profile as UserProfile)
     } catch (error) {
       console.error('Error loading user profile:', error)

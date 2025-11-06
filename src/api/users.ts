@@ -11,25 +11,33 @@ export type UserProfile = {
 }
 
 export const usersApi = {
-  async getUserProfile(userId: string): Promise<UserProfile> {
-    // First try to get the profile
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single()
 
-    // If no profile exists, create one
-    if (error && error.code === 'PGRST116') {
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert([{ id: userId }])
-        .select()
-        .single()
-      
-      if (createError) throw createError
-      return newProfile
+    if (error) {
+      if ('code' in error && error.code === 'PGRST116') return null
+      throw error
     }
+
+    return data
+  },
+
+  async createUserProfile(params: { id: string; email: string; full_name: string | null; role?: string }): Promise<UserProfile> {
+    const { id, email, full_name, role } = params
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .insert([{
+        id,
+        email,
+        full_name: full_name ?? email.split('@')[0],
+        role: role ?? 'user',
+      }])
+      .select()
+      .single()
 
     if (error) throw error
     return data
@@ -37,10 +45,11 @@ export const usersApi = {
 
   async updateUserProfile(userId: string, updates: Partial<Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>>): Promise<UserProfile> {
     // Ensure the profile exists
-    await this.getUserProfile(userId)
+    const existing = await this.getUserProfile(userId)
+    if (!existing) throw new Error('Profile does not exist')
     
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .update({
         ...updates,
         updated_at: new Date().toISOString()
@@ -56,7 +65,7 @@ export const usersApi = {
   // Get all agents
   async getAgents() {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('*')
       .eq('role', 'agent')
       .order('full_name')
@@ -80,7 +89,7 @@ export const usersApi = {
   // Update user role (admin only)
   async updateUserRole(userId: string, role: string) {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .update({ role, updated_at: new Date().toISOString() })
       .eq('id', userId)
       .select()

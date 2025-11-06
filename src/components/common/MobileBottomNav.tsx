@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Users, User, Map } from 'lucide-react'
+import { Home, Users, User, Map, FileText } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 
 const MobileBottomNav: React.FC = () => {
@@ -17,6 +17,12 @@ const MobileBottomNav: React.FC = () => {
       requiresAuth: false,
     },
     {
+      path: '/my-reports',
+      icon: FileText,
+      label: 'My Reports',
+      requiresAuth: true,
+    },
+    {
       path: '/hire-cleaners',
       icon: Users,
       label: 'Hire',
@@ -25,7 +31,7 @@ const MobileBottomNav: React.FC = () => {
     {
       path: '/reports-map',
       icon: Map,
-      label: 'Reports',
+      label: 'Map',
       requiresAuth: false,
     },
     {

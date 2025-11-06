@@ -14,12 +14,14 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import Toaster from './components/common/Toaster'
 import AIChatBot from './components/common/AIChatBot'
 import { MapView } from './components/MapView'
+import UserReportsManager from './components/community/UserReportsManager'
 
 // Community Pages
 import HomeTau from './pages/community/HomeTau'
 import ReportNew from './pages/community/ReportNew'
 // import Events from './pages/community/Events'
 // import AgentHire from './pages/community/AgentHire'
+import Logout from './pages/auth/Logout'
 import Profile from './pages/community/Profile'
 import ReportDetailPage from './pages/community/ReportDetail'
 import HireCleaners from './pages/community/HireCleaners'
@@ -59,6 +61,7 @@ function App() {
                       <Route path="/" element={<AuthenticatedHomeRedirect />} />
                       
                       <Route path="/auth" element={<Auth />} />
+                      <Route path="/logout" element={<Logout />} />
                       <Route path="/about" element={<About />} />
 
                       
@@ -68,6 +71,7 @@ function App() {
                       <Route path="/report" element={<ReportNew />} />
                       <Route path="/reports/:id" element={<ReportDetailPage />} />
                       <Route path="/reports-map" element={<MapView />} />
+                      <Route path="/my-reports" element={<UserReportsManager />} />
                       <Route path="/agents" element={<AgentHire />} />
                       <Route path="/hire-cleaners" element={<HireCleaners />} />
                       <Route

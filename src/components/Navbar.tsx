@@ -1,25 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LogOut, User, Home, LogIn, UserPlus } from 'lucide-react';
+import { LogOut, User, Home, LogIn, UserPlus, FileText } from 'lucide-react';
 
 const Navbar: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      const { error } = await signOut();
-      if (error) throw error;
-      setIsDropdownOpen(false);
-      navigate('/auth');
-    } catch (error) {
-      console.error('Failed to sign out:', error);
-      alert('Failed to sign out. Please try again.');
-    }
+    setIsDropdownOpen(false);
+    navigate('/logout');
   };
 
   const getInitials = (email: string | undefined) => {
@@ -41,7 +34,10 @@ const Navbar: React.FC = () => {
                 <Link to="/home" className="text-white hover:text-lime-300 flex items-center transition-colors">
                   <Home className="w-5 h-5 mr-1" /> Home
                 </Link>
-                <Link to="/report-map" className="text-white hover:text-lime-300 flex items-center transition-colors">
+                <Link to="/my-reports" className="text-white hover:text-lime-300 flex items-center transition-colors">
+                  <FileText className="w-5 h-5 mr-1" /> My Reports
+                </Link>
+                <Link to="/reports-map" className="text-white hover:text-lime-300 flex items-center transition-colors">
                   <span className="w-5 h-5 mr-1">🗺️</span> Report Map
                 </Link>
                 <Link to="/hire-cleaners" className="text-white hover:text-lime-300 flex items-center transition-colors">
@@ -86,6 +82,13 @@ const Navbar: React.FC = () => {
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <User className="w-4 h-4 mr-2" /> My Profile
+                    </Link>
+                    <Link
+                      to="/my-reports"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <FileText className="w-4 h-4 mr-2" /> My Reports
                     </Link>
                     <button
                       type="button"
