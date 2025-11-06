@@ -7,8 +7,8 @@ const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const adminEmail = import.meta.env.VITE_TEST_ADMIN_EMAIL || 'admin@cleancal.local'
-  const adminPassword = import.meta.env.VITE_TEST_ADMIN_PASSWORD || 'admin123'
+  const adminEmail =  'admin@cleancal.com'
+  const adminPassword =  'admin123'
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

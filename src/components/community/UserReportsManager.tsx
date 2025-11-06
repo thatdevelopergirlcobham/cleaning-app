@@ -56,6 +56,12 @@ const UserReportsManager: React.FC = () => {
     image_url: string;
     location: { lat: number; lng: number; address?: string } | string;
   }) => {
+    // Validate location: DB expects an object with lat/lng
+    if (!data.location || typeof data.location !== 'object') {
+      alert('Please select a valid location (use the search or current location).')
+      return
+    }
+
     if (modalMode === 'create') {
       await createReport({
         title: data.title,
@@ -64,7 +70,7 @@ const UserReportsManager: React.FC = () => {
         priority: (data.priority as any) || 'low',
         severity: 'low',
         image_url: data.image_url,
-        location: typeof data.location === 'string' ? undefined : data.location,
+        location: data.location,
         is_anonymous: false,
       })
     } else if (modalMode === 'edit' && editingId) {
@@ -74,7 +80,7 @@ const UserReportsManager: React.FC = () => {
         category: data.category,
         priority: (data.priority as any) || 'low',
         image_url: data.image_url,
-        location: typeof data.location === 'string' ? undefined : data.location,
+        location: data.location,
       })
       setEditingId(null)
     }

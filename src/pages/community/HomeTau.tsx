@@ -12,6 +12,9 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/solid";
 import ReportModal from "../../components/community/ReportModal";
+import { useAuth } from "../../hooks/useAuth";
+import { useUserReports } from "../../hooks/useUserReports";
+import { SUPABASE_URL, restHeaders } from "../../api/supabaseClient";
 import { reverseGeocode } from "../../utils/geocoding";
 
 import type { Report, ReportStatus, ReportSeverity } from "../../types/report";
@@ -21,10 +24,6 @@ interface FetchError extends Error {
   statusText?: string;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://hajgpcqbfougojrpaprr.supabase.co";
-const SUPABASE_KEY =
-  import.meta.env.VITE_SUPABASE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhamdwY3FiZm91Z29qcnBhcHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0Njc1MjksImV4cCI6MjA3NjA0MzUyOX0.JcY366RLPTKNCmv19lKcKVJZE1fpTv3VeheDwXRGchY";
 
 const formatDate = (dateStr: string) => {
   try {
@@ -64,6 +63,8 @@ const HomeTau: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
+  const { user } = useAuth();
+  const { createReport } = useUserReports(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,10 +94,7 @@ const HomeTau: React.FC = () => {
 
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/reports?select=*`, {
-          headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${SUPABASE_KEY}`,
-          },
+          headers: restHeaders(),
         });
 
         if (!res.ok) {
@@ -329,7 +327,28 @@ const HomeTau: React.FC = () => {
 
       {/* 🧾 Report Modal */}
       {showReportModal && (
-        <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} />
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          onSubmit={async (data) => {
+            if (!user) {
+              window.location.href = "/auth?redirect=" + encodeURIComponent(window.location.pathname);
+              return;
+            }
+            const loc = typeof data.location === "object" ? data.location : undefined;
+            await createReport({
+              title: data.title,
+              description: data.description,
+              category: data.category,
+              priority: (data.priority as any) || "low",
+              severity: "low",
+              image_url: data.image_url,
+              location: loc,
+              is_anonymous: false,
+            });
+            setShowReportModal(false);
+          }}
+        />
       )}
     </div>
   );

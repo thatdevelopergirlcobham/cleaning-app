@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { User as UserIcon, Mail, Phone, Shield, Calendar, Edit, Check, X, Trash2, FileText, MapPin } from 'lucide-react';
-import { format } from 'date-fns';
-import { supabase } from '../../api/supabaseClient';
 import { useToast } from '../../contexts/ToastContext';
-import type { Report } from '../../api/reports';
+import { User as UserIcon, Mail, Phone, Shield, Calendar, Edit, Check, X } from 'lucide-react';
+import { format } from 'date-fns';
 
 type FormData = {
   full_name: string;
@@ -14,6 +13,7 @@ type FormData = {
 const Profile: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
   const { addToast } = useToast();
+
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     full_name: '',
@@ -21,9 +21,6 @@ const Profile: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userReports, setUserReports] = useState<Report[]>([]);
-  const [loadingReports, setLoadingReports] = useState(true);
-  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -33,108 +30,6 @@ const Profile: React.FC = () => {
       });
     }
   }, [profile]);
-
-  const fetchUserReports = React.useCallback(async () => {
-    if (!user) return;
-    setLoadingReports(true);
-    try {
-      const { data, error } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setUserReports(data || []);
-    } catch (err) {
-      console.error('Error fetching user reports:', err);
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to load your reports'
-      });
-    } finally {
-      setLoadingReports(false);
-    }
-  }, [user, addToast]);
-
-  useEffect(() => {
-    if (user) {
-      fetchUserReports();
-    }
-  }, [user, fetchUserReports]);
-
-  // Realtime subscription to keep the user's report list in sync
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel(`user-reports-${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'reports', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          try {
-            const ev = payload.eventType as string;
-            const newRow = payload.new as Report;
-            const oldRow = payload.old as Report | null;
-
-            if (ev === 'INSERT') {
-              setUserReports(prev => [newRow, ...prev]);
-            } else if (ev === 'UPDATE') {
-              setUserReports(prev => prev.map(r => (r.id === newRow.id ? newRow : r)));
-            } else if (ev === 'DELETE') {
-              const idToRemove = oldRow?.id ?? newRow?.id;
-              if (idToRemove) setUserReports(prev => prev.filter(r => r.id !== idToRemove));
-            }
-          } catch (err) {
-            console.warn('Realtime handler error', err);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      try {
-        channel.unsubscribe();
-        const maybe = supabase as unknown as { removeChannel?: (c: unknown) => void };
-        if (typeof maybe.removeChannel === 'function') {
-          maybe.removeChannel(channel);
-        }
-      } catch {
-        // ignore
-      }
-    };
-  }, [user]);
-
-  const handleDeleteReport = async (reportId: string) => {
-    if (!confirm('Are you sure you want to delete this report?')) return;
-    
-    setDeletingReportId(reportId);
-    try {
-      const { error } = await supabase
-        .from('reports')
-        .delete()
-        .eq('id', reportId);
-
-      if (error) throw error;
-
-      setUserReports(prev => prev.filter(r => r.id !== reportId));
-      addToast({
-        type: 'success',
-        title: 'Success',
-        message: 'Report deleted successfully'
-      });
-    } catch (err) {
-      console.error('Error deleting report:', err);
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to delete report'
-      });
-    } finally {
-      setDeletingReportId(null);
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -341,96 +236,16 @@ const Profile: React.FC = () => {
         </div>
       </div>
 
-      {/* User Reports Section */}
+      {/* Link to dedicated My Reports page */}
       <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="font-heading font-bold text-xl text-gray-900">My Reports</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Total: <span className="font-semibold text-primary">{userReports.length}</span> {userReports.length === 1 ? 'report' : 'reports'}
-            </p>
-          </div>
-        </div>
-
-        {loadingReports ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : userReports.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600">You haven't submitted any reports yet.</p>
-            <p className="text-sm text-gray-500 mt-1">Go to Community to report waste issues.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {userReports.map((report) => (
-              <div
-                key={report.id}
-                className="border border-gray-200 rounded-lg p-4 hover:border-primary/50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h3 className="font-semibold text-gray-900">{report.title}</h3>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        report.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {report.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{report.description}</p>
-                    {report.category && (
-                      <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded mb-2">
-                        {report.category}
-                      </span>
-                    )}
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      <span className="flex items-center">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        {format(new Date(report.created_at), 'MMM d, yyyy')}
-                      </span>
-                      {report.location && (
-                        <span className="flex items-center">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          Location marked
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {report.image_url && (
-                    <img
-                      src={report.image_url}
-                      alt={report.title}
-                      className="w-20 h-20 object-cover rounded-lg ml-4"
-                    />
-                  )}
-                </div>
-                <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-100">
-                  <button
-                    onClick={() => handleDeleteReport(report.id)}
-                    disabled={deletingReportId === report.id}
-                    className="flex items-center space-x-1 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                  >
-                    {deletingReportId === report.id ? (
-                      <>
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600"></div>
-                        <span>Deleting...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4" />
-                        <span>Delete</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <h2 className="font-heading font-bold text-xl text-gray-900 mb-2">My Reports</h2>
+        <p className="text-sm text-gray-600 mb-4">Manage your reports from the dedicated page.</p>
+        <Link
+          to="/my-reports"
+          className="inline-block px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90"
+        >
+          Go to My Reports
+        </Link>
       </div>
     </div>
   )
