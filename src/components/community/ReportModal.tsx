@@ -20,7 +20,7 @@ type ReportModalProps = {
     image_url?: string;
     location?: { lat: number; lng: number; address?: string } | string;
   };
-  onSubmit: (data: {
+  onSubmit?: (data: {
     title: string;
     description: string;
     category: string;
@@ -30,7 +30,7 @@ type ReportModalProps = {
   }) => Promise<void>;
 };
 
-const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, mode = 'create', initialData, onSubmit }) => {
+const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, mode = 'create', initialData, onSubmit = async () => {} }) => {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [category, setCategory] = useState(initialData?.category || "other");
