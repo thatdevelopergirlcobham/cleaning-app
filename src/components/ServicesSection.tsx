@@ -11,7 +11,7 @@ import "swiper/css/pagination";
 
 const servicesData = [
   {
-   image: "/img/report-waste.jpg",
+   image: "https://placehold.co/400x450/e2f0c9/1E3928?text=Report+Waste+Issues",
    title: "Report Waste Issues",
     description:
     "Help keep Calabar clean by reporting waste issues in your community. Together we can make a difference!",
@@ -61,19 +61,14 @@ const ServicesSection = () => {
             </p>
           </div>
 
-          <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4">
+          <div className="shrink-0 flex flex-col sm:flex-row gap-4">
             <Link
-                to="/report"
+                to="/auth"
               className="px-6 py-3 rounded-full bg-[#81d742] text-[#0f3b2e] font-semibold hover:bg-[#73c13c] transition"
             >
                 Report an Issue
             </Link>
-              <Link
-                to="/events"
-              className="px-6 py-3 rounded-full border border-[#0f3b2e] text-[#0f3b2e] font-semibold hover:bg-gray-100 transition"
-            >
-                Join an Event
-              </Link>
+              
           </div>
         </div>
 

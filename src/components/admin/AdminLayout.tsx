@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, FileText, Users, BarChart2, Menu } from 'lucide-react'
+import { LayoutDashboard, FileText, BarChart2, Menu } from 'lucide-react'
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/reports', icon: FileText, label: 'Reports' },
-  { to: '/admin/agents', icon: Users, label: 'Agents' },
+  // { to: '/admin/agents', icon: Users, label: 'Agents' },
   { to: '/admin/analytics', icon: BarChart2, label: 'Analytics' },
 ]
 

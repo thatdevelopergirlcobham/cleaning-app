@@ -1,6 +1,6 @@
 // src/components/community/ReportModal.tsx
 import React, { useState, useRef } from "react";
-import { FiX, FiMapPin, FiUpload, FiLoader, FiCrosshair } from "react-icons/fi";
+import { FiX, FiUpload, FiLoader, FiCrosshair } from "react-icons/fi";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LocationAutocomplete from "../common/LocationAutocomplete";
@@ -200,15 +200,12 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, mode = 'crea
                 Location
               </label>
               <div className="flex items-center gap-2">
-                <div className="relative grow">
-                  <FiMapPin className="absolute left-3 top-3 text-gray-400" />
-                  <div className="pl-10">
-                    <LocationAutocomplete
-                      value={locationObj?.address || ''}
-                      onChange={(loc) => setLocationObj({ lat: loc.lat, lng: loc.lng, address: loc.address })}
-                      placeholder="Enter or search location"
-                    />
-                  </div>
+                <div className="grow">
+                  <LocationAutocomplete
+                    value={locationObj?.address || ''}
+                    onChange={(loc) => setLocationObj({ lat: loc.lat, lng: loc.lng, address: loc.address })}
+                    placeholder="Enter or search location"
+                  />
                 </div>
                 <button
                   type="button"

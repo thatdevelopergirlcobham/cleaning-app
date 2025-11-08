@@ -28,7 +28,6 @@ import HireCleaners from './pages/community/HireCleaners'
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
 import PendingReports from './pages/admin/PendingReports'
-import Agents from './pages/admin/Agents'
 import AdminLogin from './pages/admin/AdminLogin'
 
 // Auth & Other Pages
@@ -83,41 +82,32 @@ const Shell: React.FC = () => {
                       <Route
                         path="/admin"
                         element={
-                          // <ProtectedRoute requireAdmin={true}>
+                          <ProtectedRoute requireAdmin={true}>
                             <AdminLayout>
                               <AdminDashboard />
                             </AdminLayout>
-                          // </ProtectedRoute>
+                          </ProtectedRoute>
                         }
                       />
                       <Route
                         path="/admin/reports"
                         element={
-                          // <ProtectedRoute requireAdmin={true}>
+                          <ProtectedRoute requireAdmin={true}>
                             <AdminLayout>
                               <PendingReports />
                             </AdminLayout>
-                          // </ProtectedRoute>
+                          </ProtectedRoute>
                         }
                       />
-                      <Route
-                        path="/admin/agents"
-                        element={
-                          // <ProtectedRoute requireAdmin={true}>
-                            <AdminLayout>
-                              <Agents />
-                            </AdminLayout>
-                          // </ProtectedRoute>
-                        }
-                      />
+                      
                       <Route
                         path="/admin/analytics"
                         element={
-                          // <ProtectedRoute requireAdmin={true}>
+                          <ProtectedRoute requireAdmin={true}>
                             <AdminLayout>
                               <AnalyticsDashboard />
                             </AdminLayout>
-                          // </ProtectedRoute>
+                          </ProtectedRoute>
                         }
                       />
 

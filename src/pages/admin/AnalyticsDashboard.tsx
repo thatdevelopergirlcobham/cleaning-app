@@ -83,17 +83,14 @@ const AnalyticsDashboard: React.FC = () => {
   const loadAnalyticsData = useCallback(async () => {
     setLoading(true)
     try {
-      // Load all data in parallel
-      const [
-        reportsResponse,
-        eventsResponse
-      ] = await Promise.all([
-        getReports(),
-        eventsApi.getAllEvents()
+      // Load all data in parallel with per-call fallbacks to avoid failing whole dashboard
+      const [reportsResponse, eventsResponse] = await Promise.all([
+        getReports().catch(() => [] as ReportWithProfile[]),
+        eventsApi.getAllEvents().catch(() => [] as EventWithProfile[])
       ])
 
-      const allReports = reportsResponse || []
-      const allEvents = eventsResponse || []
+      const allReports = Array.isArray(reportsResponse) ? reportsResponse : []
+      const allEvents = Array.isArray(eventsResponse) ? eventsResponse : []
 
       // Process report trends (last 30 days by default)
       const thirtyDaysAgo = new Date()
@@ -197,10 +194,13 @@ const AnalyticsDashboard: React.FC = () => {
       const reporterCounts = Object.entries(
         allReports.reduce<Record<string, Reporter>>((acc, report: ReportWithProfile) => {
           const userId = report.user_id
+          const name = report.user_profiles?.full_name
+            || (report.user_profiles?.email ? String(report.user_profiles.email).split('@')[0] : undefined)
+            || 'Unknown'
           if (!acc[userId]) {
             acc[userId] = {
               user_id: userId,
-              full_name: report.user_profiles?.full_name || 'Unknown',
+              full_name: name,
               report_count: 0,
               avatar_url: report.user_profiles?.avatar_url
             }
@@ -216,11 +216,11 @@ const AnalyticsDashboard: React.FC = () => {
         .slice(0, 10)
 
       setData({
-        reportTrends,
-        statusDistribution,
-        locationHotspots,
-        userActivity,
-        topReporters
+        reportTrends: reportTrends || [],
+        statusDistribution: statusDistribution || [],
+        locationHotspots: locationHotspots || [],
+        userActivity: userActivity || [],
+        topReporters: topReporters || []
       })
 
     } catch (error) {

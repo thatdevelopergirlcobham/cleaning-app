@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useUserReports } from '../../hooks/useUserReports'
 import { type CreateReportInput } from '../../api/userReportsService'
 import ReportModal from './ReportModal'
@@ -159,7 +160,7 @@ const UserReportsManager: React.FC = () => {
 
           <button
             onClick={openCreateModal}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
           >
             Create New Report
           </button>
@@ -253,15 +254,19 @@ const UserReportsManager: React.FC = () => {
                   <div className="flex flex-col gap-2 ml-4">
                     <button
                       onClick={() => startEdit(report)}
-                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition text-sm"
+                      className="inline-flex items-center justify-center bg-blue-500 text-white w-9 h-9 rounded hover:bg-blue-600 transition"
+                      aria-label="Edit report"
+                      title="Edit"
                     >
-                      Edit
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(report.id)}
-                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition text-sm"
+                      className="inline-flex items-center justify-center bg-red-500 text-white w-9 h-9 rounded hover:bg-red-600 transition"
+                      aria-label="Delete report"
+                      title="Delete"
                     >
-                      Delete
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>

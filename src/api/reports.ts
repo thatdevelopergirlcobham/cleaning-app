@@ -41,6 +41,7 @@ export interface ReportWithProfile {
   resolution_notes: string | null
   user_profiles?: {
     full_name: string
+    email?: string
     avatar_url?: string | null
   } | null
 }
@@ -52,6 +53,7 @@ export const getReports = async (): Promise<ReportWithProfile[]> => {
       *,
       user_profiles (
         full_name,
+        email,
         avatar_url
       )
     `)
@@ -68,6 +70,7 @@ export const getReportById = async (id: string): Promise<ReportWithProfile | nul
       *,
       user_profiles (
         full_name,
+        email,
         avatar_url
       )
     `)

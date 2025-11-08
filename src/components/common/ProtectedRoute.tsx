@@ -17,6 +17,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
+  // Developer admin/testing override (read early)
+  const isDevAdmin = typeof window !== 'undefined' && !!localStorage.getItem('dev_admin_logged_in')
+  const isEnvAdminEmail = user?.email === import.meta.env.VITE_TEST_ADMIN_EMAIL
+
+  // Allow dev admin through admin routes even without user session
+  if (requireAdmin && isDevAdmin) {
+    return <>{children}</>
+  }
+
   // Show a clean loading state while auth/profile are resolving
   if (loading) {
     return (
@@ -26,15 +35,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     )
   }
 
-  // If no authenticated user, send to auth with return url
+  // If no authenticated user
   if (!user) {
+    if (requireAdmin) {
+      // For admin-only routes, send to admin login
+      const redirect = encodeURIComponent(location.pathname + location.search)
+      return <Navigate to={`/admin/login?redirect=${redirect}`} replace />
+    }
     const redirect = encodeURIComponent(location.pathname + location.search)
     return <Navigate to={`/auth?redirect=${redirect}`} replace />
   }
-
-  // Developer admin/testing override
-  const isDevAdmin = typeof window !== 'undefined' && !!localStorage.getItem('dev_admin_logged_in')
-  const isEnvAdminEmail = user.email === import.meta.env.VITE_TEST_ADMIN_EMAIL
 
   // Admin-only routes
   if (requireAdmin) {

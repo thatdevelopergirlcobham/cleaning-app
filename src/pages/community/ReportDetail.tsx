@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../../api/supabaseClient';
 import { reverseGeocode } from '../../utils/geocoding';
 import { MapIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useComments } from '../../hooks/useComments';
 import { format } from 'date-fns';
@@ -192,16 +193,20 @@ const ReportDetailPage: React.FC = () => {
                           ) : (
                             <>
                               <button
-                                className="text-blue-700 text-xs font-medium"
+                                className="inline-flex items-center justify-center text-blue-700 bg-blue-50 hover:bg-blue-100 rounded w-7 h-7"
                                 onClick={() => { setEditingCommentId(c.id); setEditingContent(c.content); }}
+                                aria-label="Edit comment"
+                                title="Edit"
                               >
-                                Edit
+                                <Pencil className="w-3.5 h-3.5" />
                               </button>
                               <button
-                                className="text-red-700 text-xs font-medium"
+                                className="inline-flex items-center justify-center text-red-700 bg-red-50 hover:bg-red-100 rounded w-7 h-7"
                                 onClick={async () => { if (confirm('Delete this comment?')) await deleteComment(c.id); }}
+                                aria-label="Delete comment"
+                                title="Delete"
                               >
-                                Delete
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </>
                           )}

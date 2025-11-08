@@ -248,26 +248,41 @@ const PendingReports: React.FC = () => {
           title="Report Details" 
           onClose={() => setIsDetailModalOpen(false)}
         >
-          <h2 className="text-xl font-semibold mb-2">{selectedReport.title}</h2>
-          <p className="text-gray-700 mb-2">{selectedReport.description}</p>
-          <p className="text-gray-600 flex items-center gap-1 mb-1">{selectedReport.user_profiles && selectedReport.user_profiles.full_name ? selectedReport.user_profiles.full_name : 'N/A'}</p>
-          <p className="text-gray-600 flex items-center gap-1 mb-1">
-            {typeof selectedReport.location === 'object' && selectedReport.location !== null
-              ? `${selectedReport.location.lat.toFixed(4)}, ${selectedReport.location.lng.toFixed(4)}`
-              : selectedReport.location || 'N/A'}
-          </p>
-          {loadingInsights ? (
-            <LoadingSpinner />
-          ) : (
-            <div className="mt-4">
-              <h3 className="font-semibold mb-2">AI Insights:</h3>
-              <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                {aiInsights.map((insight, index) => (
-                  <li key={index}>{insight}</li>
-                ))}
-              </ul>
+          <div className="max-h-[70vh] overflow-y-auto pr-1">
+            <h2 className="text-xl font-semibold mb-3">{selectedReport.title}</h2>
+            {selectedReport.image_url && (
+              <div className="mb-4">
+                <img
+                  src={selectedReport.image_url}
+                  alt={selectedReport.title}
+                  className="w-full max-h-64 object-cover rounded-lg border"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <p className="text-gray-700 break-words">{selectedReport.description}</p>
+              <p className="text-gray-600">
+                <span className="font-medium">Reporter:</span> {selectedReport.user_profiles && selectedReport.user_profiles.full_name ? selectedReport.user_profiles.full_name : 'N/A'}
+              </p>
+              <p className="text-gray-600">
+                <span className="font-medium">Location:</span> {typeof selectedReport.location === 'object' && selectedReport.location !== null
+                  ? `${selectedReport.location.lat.toFixed(4)}, ${selectedReport.location.lng.toFixed(4)}`
+                  : selectedReport.location || 'N/A'}
+              </p>
             </div>
-          )}
+            {loadingInsights ? (
+              <div className="mt-4"><LoadingSpinner /></div>
+            ) : (
+              <div className="mt-4">
+                <h3 className="font-semibold mb-2">AI Insights:</h3>
+                <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                  {aiInsights.map((insight, index) => (
+                    <li key={index}>{insight}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </Modal>
       )}
     </div>

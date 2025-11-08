@@ -30,6 +30,14 @@ const Auth: React.FC = () => {
     setLoading(true)
 
     try {
+      // For admin accounts, force using the admin login page
+      if (!isSignUp && email === import.meta.env.VITE_TEST_ADMIN_EMAIL) {
+        const redirect = searchParams.get('redirect')
+        navigate(redirect ? `/admin/login?redirect=${encodeURIComponent(redirect)}` : '/admin/login')
+        setLoading(false)
+        return
+      }
+
       const { error } = isSignUp
         ? await signUp(email, password, fullName)
         : await signIn(email, password)
@@ -47,10 +55,11 @@ const Auth: React.FC = () => {
           message: isSignUp ? 'Account created successfully!' : 'Signed in successfully!'
         })
         
-        // Redirect to home page after successful authentication
+        // Redirect after successful authentication
+        const redirect = searchParams.get('redirect')
         setTimeout(() => {
-          navigate('/home')
-        }, 500) // Small delay to show the success message
+          navigate(redirect ? decodeURIComponent(redirect) : '/home', { replace: true })
+        }, 500)
       }
     } catch {
       addToast({
@@ -67,15 +76,30 @@ const Auth: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-12 w-12 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-xl">C</span>
-          </div>
           <h2 className="mt-6 text-center font-heading font-bold text-3xl text-gray-900">
             {isSignUp ? 'Create Account' : 'Sign In'}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {isSignUp ? 'Join the CleanCal community' : 'Welcome back to CleanCal'}
           </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="w-full bg-gray-100 rounded-xl p-1 flex">
+          <button
+            type="button"
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${!isSignUp ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+            onClick={() => setIsSignUp(false)}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${isSignUp ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+            onClick={() => setIsSignUp(true)}
+          >
+            Register
+          </button>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -139,13 +163,14 @@ const Auth: React.FC = () => {
             </button>
           </div>
 
-          <div className="text-center">
+          <div className="text-center text-sm text-gray-600">
+            {isSignUp ? 'Already have an account?' : 'Need an account?'}
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary hover:text-primary/80 font-medium"
+              className="ml-1 text-primary hover:text-primary/80 font-medium"
             >
-              {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+              {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
           </div>
         </form>
