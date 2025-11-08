@@ -27,8 +27,8 @@ const HeroSection: React.FC = () => {
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </Link>
                   <Link
-                to="/reports-map"
-                    className="inline-flex items-center justify-center px-8  py-3 border-2 border-lime-500 text-green-500 text-base font-medium rounded-full bg-transparent transition-colors"
+                to="/auth?mode?signup"
+                    className="inline-flex items-center justify-center px-8  py-3 border-2 border-lime-500 text-white text-base font-medium rounded-full bg-transparent transition-colors"
                   >
                 View Reports
                   </Link>

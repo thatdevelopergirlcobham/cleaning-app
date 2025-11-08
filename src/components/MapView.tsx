@@ -81,7 +81,7 @@ export const MapView = () => {
     <div className="w-full h-[calc(100vh-64px)] relative p-4 bg-gray-50">
       <div className="w-full h-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
         {/* Controls */}
-        <div className="absolute top-6 left-6 z-[1000] bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+        <div className="absolute top-6 left-6 z-1000 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -104,7 +104,7 @@ export const MapView = () => {
         {/* Location button */}
         <button 
           onClick={handleLocateMe}
-          className="absolute bottom-6 right-6 z-[1000] bg-white p-3 rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+          className="absolute bottom-6 right-6 z-1000 bg-white p-3 rounded-full shadow-lg hover:bg-gray-100 transition-colors"
           title="Find my location"
           aria-label="Find my location"
         >

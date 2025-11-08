@@ -78,14 +78,14 @@ const Navbar: React.FC = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                     <Link
                       to="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 items-center"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <User className="w-4 h-4 mr-2" /> My Profile
                     </Link>
                     <Link
                       to="/my-reports"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <FileText className="w-4 h-4 mr-2" /> My Reports

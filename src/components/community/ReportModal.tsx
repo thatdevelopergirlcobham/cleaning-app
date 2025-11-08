@@ -200,7 +200,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, mode = 'crea
                 Location
               </label>
               <div className="flex items-center gap-2">
-                <div className="relative flex-grow">
+                <div className="relative grow">
                   <FiMapPin className="absolute left-3 top-3 text-gray-400" />
                   <div className="pl-10">
                     <LocationAutocomplete

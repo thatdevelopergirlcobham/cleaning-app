@@ -86,7 +86,7 @@ const Profile: React.FC = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-2xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
             <UserIcon className="w-9 h-9 text-primary" />
           </div>
           <div className="flex-1 w-full">
@@ -134,7 +134,7 @@ const Profile: React.FC = () => {
 
         <div className="space-y-5 border-t border-gray-200 pt-6">
           <div className="flex items-start">
-            <div className="flex-shrink-0 w-5 h-5 text-gray-400 mt-0.5">
+            <div className="shrink-0 w-5 h-5 text-gray-400 mt-0.5">
               <Mail className="w-5 h-5" />
             </div>
             <div className="ml-4">
@@ -146,7 +146,7 @@ const Profile: React.FC = () => {
 
           {isEditing ? (
             <div className="flex items-start">
-              <div className="flex-shrink-0 w-5 h-5 text-gray-400 mt-0.5">
+              <div className="shrink-0 w-5 h-5 text-gray-400 mt-0.5">
                 <Phone className="w-5 h-5" />
               </div>
               <div className="ml-4 flex-1">
@@ -164,7 +164,7 @@ const Profile: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-start">
-              <div className="flex-shrink-0 w-5 h-5 text-gray-400 mt-0.5">
+              <div className="shrink-0 w-5 h-5 text-gray-400 mt-0.5">
                 <Phone className="w-5 h-5" />
               </div>
               <div className="ml-4">
@@ -175,7 +175,7 @@ const Profile: React.FC = () => {
           )}
 
           <div className="flex items-start">
-            <div className="flex-shrink-0 w-5 h-5 text-gray-400 mt-0.5">
+            <div className="shrink-0 w-5 h-5 text-gray-400 mt-0.5">
               <Calendar className="w-5 h-5" />
             </div>
             <div className="ml-4">

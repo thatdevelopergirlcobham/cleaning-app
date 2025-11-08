@@ -70,7 +70,7 @@ const CommentList: React.FC<CommentListProps> = ({
         ) : (
           comments.map((comment) => (
             <div key={comment.id} className="flex space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 {comment.user_profiles?.avatar_url ? (
                   <img
                     src={comment.user_profiles.avatar_url}

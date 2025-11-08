@@ -38,18 +38,13 @@ const AboutSection: React.FC = () => {
             <div className="mt-8 flex items-center gap-4">
               <Link
                 to="/auth?mode=signup"
-                className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-full text-black bg-lime-500 transition-colors"
+                className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-full text-white w-full bg-lime-500 transition-colors"
               >
                 Join the Movement
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
 
-              <Link
-                to="/reports-map"
-                className="inline-flex items-center justify-center px-8 py-3 border-2 border-black text-black text-base font-medium rounded-full bg-transparent transition-colors"
-              >
-                View Reports Map
-              </Link>
+             
             </div>
           </div>
         </div>
