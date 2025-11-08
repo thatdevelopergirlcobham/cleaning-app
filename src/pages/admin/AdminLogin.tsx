@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Mail, Lock } from 'lucide-react'
 import { supabase } from '../../api/supabaseClient'
-import { usersApi } from '../../api/users'
+// import { usersApi } from '../../api/users'
 
 const AdminLogin: React.FC = () => {
   const navigate = useNavigate()
